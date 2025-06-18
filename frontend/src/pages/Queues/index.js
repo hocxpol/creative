@@ -93,7 +93,7 @@ const reducer = (state, action) => {
 
 const Queues = () => {
   const classes = useStyles();
-
+  const companyId = localStorage.getItem("companyId");
   const [queues, dispatch] = useReducer(reducer, []);
   const [loading, setLoading] = useState(false);
 
@@ -107,19 +107,19 @@ const Queues = () => {
     (async () => {
       setLoading(true);
       try {
-        const { data } = await api.get("/queue");
+        const { data } = await api.get("/queue", {
+          params: { companyId }
+        });
         dispatch({ type: "LOAD_QUEUES", payload: data });
-
         setLoading(false);
       } catch (err) {
         toastError(err);
         setLoading(false);
       }
     })();
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
-    const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
     socket.on(`company-${companyId}-queue`, (data) => {
@@ -159,8 +159,10 @@ const Queues = () => {
 
   const handleDeleteQueue = async (queueId) => {
     try {
-      await api.delete(`/queue/${queueId}`);
-			toast.success(i18n.t("queues.messages.deleted"));
+      await api.delete(`/queue/${queueId}`, {
+        params: { companyId }
+      });
+      toast.success(i18n.t("queues.messages.deleted"));
     } catch (err) {
       toastError(err);
     }

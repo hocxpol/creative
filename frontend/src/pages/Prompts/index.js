@@ -112,12 +112,22 @@ const Prompts = () => {
 
   useEffect(() => {
     async function fetchData() {
-      const planConfigs = await getPlanCompany(undefined, companyId);
-      if (!planConfigs.plan.useOpenAi) {
-        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-        setTimeout(() => {
-          history.push(`/`)
-        }, 1000);
+      try {
+        if (!companyId) {
+          toast.error("Company ID is required");
+          history.push('/');
+          return;
+        }
+        const planConfigs = await getPlanCompany(undefined, companyId);
+        if (!planConfigs.plan.useOpenAi) {
+          toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
+          setTimeout(() => {
+            history.push(`/`)
+          }, 1000);
+        }
+      } catch (err) {
+        toastError(err);
+        history.push('/');
       }
     }
     fetchData();

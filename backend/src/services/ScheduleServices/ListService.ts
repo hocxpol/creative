@@ -1,14 +1,15 @@
-import { Op, Sequelize } from "sequelize";
-import Contact from "../../models/Contact";
+import { Op } from "sequelize";
 import Schedule from "../../models/Schedule";
+import Contact from "../../models/Contact";
 import User from "../../models/User";
+import Whatsapp from "../../models/Whatsapp";
 
 interface Request {
   searchParam?: string;
   contactId?: number | string;
   userId?: number | string;
-  companyId?: number;
   pageNumber?: string | number;
+  companyId: number;
 }
 
 interface Response {
@@ -18,66 +19,36 @@ interface Response {
 }
 
 const ListService = async ({
-  searchParam,
-  contactId = "",
-  userId = "",
+  searchParam = "",
+  contactId,
+  userId,
   pageNumber = "1",
   companyId
 }: Request): Promise<Response> => {
-  let whereCondition = {};
   const limit = 20;
-  const offset = limit * (+pageNumber - 1);
+  const offset = (Number(pageNumber) - 1) * limit;
 
-  if (searchParam) {
-    whereCondition = {
+  const whereCondition = {
+    companyId,
+    ...(searchParam && {
       [Op.or]: [
-        {
-          "$Schedule.body$": Sequelize.where(
-            Sequelize.fn("LOWER", Sequelize.col("Schedule.body")),
-            "LIKE",
-            `%${searchParam.toLowerCase()}%`
-          )
-        },
-        {
-          "$Contact.name$": Sequelize.where(
-            Sequelize.fn("LOWER", Sequelize.col("contact.name")),
-            "LIKE",
-            `%${searchParam.toLowerCase()}%`
-          )
-        },
-      ],
-    }
-  }
-
-  if (contactId !== "") {
-    whereCondition = {
-      ...whereCondition,
-      contactId
-    }
-  }
-
-  if (userId !== "") {
-    whereCondition = {
-      ...whereCondition,
-      userId
-    }
-  }
-
-  whereCondition = {
-    ...whereCondition,
-    companyId: {
-      [Op.eq]: companyId
-    }
-  }
+        { body: { [Op.like]: `%${searchParam}%` } },
+        { "$contact.name$": { [Op.like]: `%${searchParam}%` } }
+      ]
+    }),
+    ...(contactId && { contactId }),
+    ...(userId && { userId })
+  };
 
   const { count, rows: schedules } = await Schedule.findAndCountAll({
     where: whereCondition,
     limit,
     offset,
-    order: [["createdAt", "DESC"]],
+    order: [["sendAt", "DESC"]],
     include: [
       { model: Contact, as: "contact", attributes: ["id", "name"] },
       { model: User, as: "user", attributes: ["id", "name"] },
+      { model: Whatsapp, as: "whatsapp", attributes: ["id", "name"] }
     ]
   });
 

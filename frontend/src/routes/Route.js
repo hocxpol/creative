@@ -3,9 +3,10 @@ import { Route as RouterRoute, Redirect, useHistory } from "react-router-dom";
 
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
+import { Can } from "../components/Can";
 
 const Route = ({ component: Component, isPrivate = false, ...rest }) => {
-	const { isAuth, loading } = useContext(AuthContext);
+	const { isAuth, loading, user } = useContext(AuthContext);
 	const history = useHistory();
 
 	useEffect(() => {
@@ -22,8 +23,20 @@ const Route = ({ component: Component, isPrivate = false, ...rest }) => {
 		return <Redirect to="/login" />;
 	}
 
-	if (isAuth && !isPrivate) {
+	if (isAuth && !isPrivate && (rest.path === "/login" || rest.path === "/signup")) {
 		return <Redirect to="/" />;
+	}
+
+	// Check if trying to access dashboard without permission
+	if (isAuth && rest.path === "/" && user) {
+		return (
+			<Can
+				role={user.profile}
+				perform="dashboard:view"
+				yes={() => <RouterRoute {...rest} component={Component} />}
+				no={() => <Redirect to="/tickets" />}
+			/>
+		);
 	}
 
 	return <RouterRoute {...rest} component={Component} />;

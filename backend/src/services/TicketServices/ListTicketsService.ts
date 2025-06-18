@@ -51,7 +51,12 @@ const ListTicketsService = async ({
     companyId
   };
 
-  if (showAll !== "true") {
+  // if (showAll !== "true") { // Versão Antiga
+	// Get user to check allTicket permission
+	const user = await ShowUserService(userId);
+	const hasAllTicketPermission = user.allTicket === 'enabled';
+
+	if (showAll !== "true" && !hasAllTicketPermission) {
     whereCondition = {
       ...whereCondition,
       [Op.or]: [
@@ -204,7 +209,8 @@ const ListTicketsService = async ({
         where: { userId: user }
       });
       if (ticketUsers) {
-        ticketsUserFilter.push(ticketUsers.map(t => t.id));
+        //ticketsUserFilter.push(ticketUsers.map(t => t.id)); BUG! (Versão Antiga)
+	ticketsUserFilter.push(...ticketUsers.map(t => t.id));
       }
     }
 

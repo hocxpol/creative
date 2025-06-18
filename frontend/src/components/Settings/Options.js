@@ -285,7 +285,7 @@ export default function Options(props) {
         {/* <Grid xs={12} item>
                     <Title>Configurações Gerais</Title>
                 </Grid> */}
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
 						<InputLabel id="ratings-label">Avaliações</InputLabel>
 						<Select
@@ -303,7 +303,7 @@ export default function Options(props) {
 						</FormHelperText>
 					</FormControl>
 				</Grid>
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
 						<InputLabel id="schedule-type-label">
 							Gerenciamento de Expediente
@@ -316,7 +316,7 @@ export default function Options(props) {
 							}}
 						>
 							<MenuItem value={"disabled"}>Desabilitado</MenuItem>
-							<MenuItem value={"queue"}>Fila</MenuItem>
+							<MenuItem value={"queue"}>Departamento</MenuItem>
 							<MenuItem value={"company"}>Empresa</MenuItem>
 						</Select>
 						<FormHelperText>
@@ -324,7 +324,7 @@ export default function Options(props) {
 						</FormHelperText>
 					</FormControl>
 				</Grid>
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
 						<InputLabel id="group-type-label">
 							Ignorar Mensagens de Grupos
@@ -344,7 +344,7 @@ export default function Options(props) {
 						</FormHelperText>
 					</FormControl>
 				</Grid>
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
 						<InputLabel id="call-type-label">
 							Aceitar Chamada
@@ -364,7 +364,7 @@ export default function Options(props) {
 						</FormHelperText>
 					</FormControl>
 				</Grid>
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
 						<InputLabel id="chatbot-type-label">
 							Tipo Chatbot
@@ -386,7 +386,7 @@ export default function Options(props) {
 					</FormControl>
 				</Grid>
 		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
 						<InputLabel id="sendGreetingAccepted-label">Enviar saudação ao aceitar o ticket</InputLabel>
 						<Select
@@ -407,9 +407,9 @@ export default function Options(props) {
 		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
 		
 		{/* ENVIAR MENSAGEM DE TRANSFERENCIA DE SETOR/ATENDENTE */}
-				<Grid xs={12} sm={6} md={4} item>
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
-						<InputLabel id="sendMsgTransfTicket-label">Enviar mensagem de transferencia de Fila/agente</InputLabel>
+						<InputLabel id="sendMsgTransfTicket-label">Enviar mensagem de transferência de Departamento/agente</InputLabel>
 						<Select
 							labelId="sendMsgTransfTicket-label"
 							value={SettingsTransfTicket}
@@ -425,10 +425,10 @@ export default function Options(props) {
 						</FormHelperText>
 					</FormControl>
 				</Grid>
-		{/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 FILA */}
-				<Grid xs={12} sm={6} md={4} item>
+		{/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 DEPARTAMENTO */}
+				<Grid xs={12} sm={6} md={6} item>
 					<FormControl className={classes.selectContainer}>
-						<InputLabel id="sendGreetingMessageOneQueues-label">Enviar saudação quando houver somente 1 fila</InputLabel>
+						<InputLabel id="sendGreetingMessageOneQueues-label">Enviar saudação quando houver somente 1 departamento</InputLabel>
 						<Select
 							labelId="sendGreetingMessageOneQueues-label"
 							value={sendGreetingMessageOneQueues}

@@ -1,15 +1,15 @@
-import { Sequelize, Op, Filterable } from "sequelize";
+import { Op } from "sequelize";
 import QuickMessage from "../../models/QuickMessage";
 
 interface Request {
   searchParam?: string;
   pageNumber?: string;
-  companyId: number | string;
-  userId?: number | string;
+  userId: number;
+  companyId: number;
 }
 
 interface Response {
-  records: QuickMessage[];
+  quickMessages: QuickMessage[];
   count: number;
   hasMore: boolean;
 }
@@ -17,48 +17,43 @@ interface Response {
 const ListService = async ({
   searchParam = "",
   pageNumber = "1",
-  companyId,
-  userId
+  userId,
+  companyId
 }: Request): Promise<Response> => {
-  const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();
-
-  let whereCondition: Filterable["where"] = {
-    // [Op.or]: [
-    //   {
-    shortcode: Sequelize.where(
-      Sequelize.fn("LOWER", Sequelize.col("shortcode")),
-      "LIKE",
-      `%${sanitizedSearchParam}%`
-    )
-    //   },
-    //   {
-    //     message: Sequelize.where(
-    //       Sequelize.fn("LOWER", Sequelize.col("message")),
-    //       "LIKE",
-    //       `%${sanitizedSearchParam}%`
-    //     )
-    //   }
-    // ]
-  };
-  whereCondition = {
-  ...whereCondition,
-  companyId,
-  userId: userId
-  }
   const limit = 20;
-  const offset = limit * (+pageNumber - 1);
+  const offset = (Number(pageNumber) - 1) * limit;
 
-  const { count, rows: records } = await QuickMessage.findAndCountAll({
+  const whereCondition = {
+    [Op.or]: [
+      {
+        shortcode: {
+          [Op.like]: `%${searchParam}%`
+        }
+      },
+      {
+        message: {
+          [Op.like]: `%${searchParam}%`
+        }
+      }
+    ],
+    companyId,
+    [Op.or]: [
+      { userId },
+      { visibility: "all" }
+    ]
+  };
+
+  const { count, rows: quickMessages } = await QuickMessage.findAndCountAll({
     where: whereCondition,
     limit,
     offset,
-    order: [["shortcode", "ASC"]]
+    order: [["createdAt", "DESC"]]
   });
 
-  const hasMore = count > offset + records.length;
+  const hasMore = count > offset + quickMessages.length;
 
   return {
-    records,
+    quickMessages,
     count,
     hasMore
   };

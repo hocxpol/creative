@@ -312,6 +312,10 @@ export const filterMessages = (msg: WAMessage): boolean => {
     
     // Filtra outros protocolMessages
     if (msg.message?.protocolMessage) {
+      // Permite apenas mensagens de revogação (type 0 - REVOKE)
+      if (msg.message.protocolMessage.type === 0) {
+        return true;
+      }
       logger.info(`[MessageFilter] ProtocolMessage filtrado: ${msg.key.id}`);
       return false;
     }
@@ -319,7 +323,6 @@ export const filterMessages = (msg: WAMessage): boolean => {
     // Filtra mensagens de sistema
     if (
       [
-        WAMessageStubType.REVOKE,
         WAMessageStubType.E2E_DEVICE_CHANGED,
         WAMessageStubType.E2E_IDENTITY_CHANGED,
         WAMessageStubType.CIPHERTEXT

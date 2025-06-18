@@ -25,6 +25,7 @@ import {
   Paper,
   Tab,
   Tabs,
+  FormHelperText,
 } from "@material-ui/core";
 
 import api from "../../services/api";
@@ -91,7 +92,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   const initialState = {
     name: "",
     greetingMessage: "",
-    complationMessage: "",
+    completionMessage: "",
     outOfHoursMessage: "",
     ratingMessage: "",
     isDefault: false,
@@ -120,7 +121,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   
   useEffect(() => {
     const fetchSession = async () => {
-      if (!whatsAppId) return;
+      if (!whatsAppId || !user?.companyId) return;
 
       try {
         const { data } = await api.get(`whatsapp/${whatsAppId}?session=0`);
@@ -134,10 +135,11 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
       }
     };
     fetchSession();
-  }, [whatsAppId]);
+  }, [whatsAppId, user?.companyId]);
 
   useEffect(() => {
     (async () => {
+      if (!user?.companyId) return;
       try {
         const { data } = await api.get("/prompt");
         setPrompts(data.prompts);
@@ -145,10 +147,11 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
         toastError(err);
       }
     })();
-  }, [whatsAppId]);
+  }, [user?.companyId]);
 
   useEffect(() => {
     (async () => {
+      if (!user?.companyId) return;
       try {
         const { data } = await api.get("/queue");
         setQueues(data);
@@ -156,11 +159,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
         toastError(err);
       }
     })();
-  }, []);
+  }, [user?.companyId]);
 
   useEffect(() => {
     const fetchPlanInfo = async () => {
       try {
+        if (!user?.companyId) {
+          return;
+        }
         const planInfo = await getPlanCompany(null, user.companyId);
         if (planInfo) {
           setCurrentPlanId(planInfo.id);
@@ -170,11 +176,11 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
           setShowExternalApi(planInfo.plan.useExternalApi || false);
         }
       } catch (err) {
-
+        toastError(err);
       }
     };
     fetchPlanInfo();
-  }, [getPlanCompany, user.companyId]);
+  }, [getPlanCompany, user?.companyId]);
 
   const handleSaveWhatsApp = async (values) => {
     const whatsappData = {
@@ -311,14 +317,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                       <Grid item xs={12}>
                         <Field
                           as={TextField}
-                          label={i18n.t("whatsappModal.form.complationMessage")}
-                          type="complationMessage"
+                          label={i18n.t("whatsappModal.form.completionMessage")}
+                          type="completionMessage"
                           multiline
                           rows={4}
                           fullWidth
-                          name="complationMessage"
-                          error={touched.complationMessage && Boolean(errors.complationMessage)}
-                          helperText={touched.complationMessage && errors.complationMessage}
+                          name="completionMessage"
+                          error={touched.completionMessage && Boolean(errors.completionMessage)}
+                          helperText={touched.completionMessage && errors.completionMessage}
                           variant="outlined"
                           margin="dense"
                         />
@@ -359,7 +365,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                           selectedQueueIds={selectedQueueId}
                           onChange={(selectedId) => setSelectedQueueId(selectedId)}
                           multiple={false}
-                          title={'Fila de Transferência'}
+                          title={'Departamento de Transferência'}
                         />
                       </Grid>
                       <Grid item xs={12}>

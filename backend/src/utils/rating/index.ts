@@ -7,6 +7,18 @@ import SendWhatsAppMessage from "../../services/WbotServices/SendWhatsAppMessage
 import moment from "moment";
 import formatBody from "../../helpers/Mustache";
 import * as Sentry from "@sentry/node";
+import CreateMessageService from "../../services/MessageServices/CreateMessageService";
+
+interface MessageData {
+  id: string;
+  ticketId: number;
+  body: string;
+  fromMe: boolean;
+  read: boolean;
+  mediaType: string;
+  ack: number;
+  dataJson: string;
+}
 
 /**
  * Verifica se um ticket está elegível para avaliação
@@ -45,7 +57,7 @@ export const handleRating = async (
 
     const io = getIO();
 
-    const { complationMessage } = await ShowWhatsAppService(
+    const { completionMessage } = await ShowWhatsAppService(
       ticket.whatsappId,
       ticket.companyId
     );
@@ -64,9 +76,23 @@ export const handleRating = async (
     });
 
     // Envia mensagem de conclusão se existir
-    if (complationMessage) {
-      const body = formatBody(`\u200e${complationMessage}`, ticket.contact);
-      await SendWhatsAppMessage({ body, ticket });
+    if (completionMessage) {
+      const body = formatBody(`\u200e${completionMessage}`, ticket.contact);
+      const sentMessage = await SendWhatsAppMessage({ body, ticket });
+      
+      // Salva a mensagem de conclusão no histórico usando os dados retornados pelo WhatsApp
+      const messageData: MessageData = {
+        id: sentMessage.key.id,
+        ticketId: ticket.id,
+        body: body,
+        fromMe: true,
+        read: false,
+        mediaType: "chat",
+        ack: 0,
+        dataJson: JSON.stringify(sentMessage)
+      };
+      
+      await CreateMessageService({ messageData, companyId: ticket.companyId });
     }
 
     // Atualiza o tracking do ticket

@@ -20,13 +20,13 @@ import AppError from "../errors/AppError";
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
-  userId: string | number;
+  userId: number;
 };
 
 type StoreData = {
   shortcode: string;
   message: string;
-  userId: number | number;
+  userId: number;
 };
 
 type FindParams = {
@@ -35,17 +35,19 @@ type FindParams = {
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber, userId } = req.query as IndexQuery;
+  const searchParam = req.query.searchParam as string || "";
+  const pageNumber = req.query.pageNumber as string || "1";
+  const userId = Number(req.query.userId) || 0;
   const { companyId } = req.user;
 
-  const { records, count, hasMore } = await ListService({
+  const { quickMessages, count, hasMore } = await ListService({
     searchParam,
     pageNumber,
     companyId,
     userId
   });
 
-  return res.json({ records, count, hasMore });
+  return res.json({ records: quickMessages, count, hasMore });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
@@ -54,7 +56,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const schema = Yup.object().shape({
     shortcode: Yup.string().required(),
-    message: Yup.string().required()
+    message: Yup.string().required(),
+    visibility: Yup.string()
+      .oneOf(["me", "all"], "ERR_QUICKMESSAGE_INVALID_VISIBILITY")
+      .required("ERR_QUICKMESSAGE_VISIBILITY_REQUIRED")
   });
 
   try {
@@ -95,7 +100,10 @@ export const update = async (
 
   const schema = Yup.object().shape({
     shortcode: Yup.string().required(),
-    message: Yup.string().required()
+    message: Yup.string().required(),
+    visibility: Yup.string()
+      .oneOf(["me", "all"], "ERR_QUICKMESSAGE_INVALID_VISIBILITY")
+      .required("ERR_QUICKMESSAGE_VISIBILITY_REQUIRED")
   });
 
   try {
@@ -110,6 +118,7 @@ export const update = async (
     ...data,
     userId: req.user.id,
     id,
+    companyId
   });
 
   const io = getIO();
@@ -180,18 +189,18 @@ export const deleteMedia = async (
 
   try {
     const quickmessage = await QuickMessage.findByPk(id);
-    const filePath = path.resolve("public","quickMessage",quickmessage.mediaName);
+    const filePath = path.resolve("public", "quickMessage", quickmessage.mediaPath);
     const fileExists = fs.existsSync(filePath);
     if (fileExists) {
       fs.unlinkSync(filePath);
     }
-    quickmessage.update ({
+    quickmessage.update({
       mediaPath: null,
       mediaName: null
     });
 
     return res.send({ mensagem: "Arquivo Excluído" });
-    } catch (err: any) {
-      throw new AppError(err.message);
+  } catch (err: any) {
+    throw new AppError(err.message);
   }
 };

@@ -287,7 +287,7 @@ const UserModal = ({ open, onClose, userId }) => {
 														onChange={(e) => setWhatsappId(e.target.value)}
 														label={i18n.t("userModal.form.whatsapp")}
 													>
-														<MenuItem value={''}>&nbsp;</MenuItem>
+														<MenuItem value={''}>Nenhum</MenuItem>
 														{whatsApps.map((whatsapp) => (
 															<MenuItem key={whatsapp.id} value={whatsapp.id}>{whatsapp.name}</MenuItem>
 														))}
@@ -308,20 +308,20 @@ const UserModal = ({ open, onClose, userId }) => {
 													fullWidth
 												>
 													<>
-														<InputLabel id="profile-selection-input-label">
-															{i18n.t("userModal.form.allTicket")}
+														<InputLabel id="tickets-view-selection-label">
+															{i18n.t("ticketsView")}
 														</InputLabel>
 
 														<Field
 															as={Select}
-															label={i18n.t("allTicket.form.viewTags")}
+															label={i18n.t("ticketsView")}
 															name="allTicket"
-															labelId="allTicket-selection-label"
-															id="allTicket-selection"
+															labelId="tickets-view-selection-label"
+															id="tickets-view-selection"
 															required
 														>
-															<MenuItem value="enabled">{i18n.t("userModal.form.allTicketEnabled")}</MenuItem>
-															<MenuItem value="desabled">{i18n.t("userModal.form.allTicketDesabled")}</MenuItem>
+															<MenuItem value="enabled">{i18n.t("ticketsViewEnabled")}</MenuItem>
+															<MenuItem value="desabled">{i18n.t("ticketsViewDisabled")}</MenuItem>
 														</Field>
 													</>
 												</FormControl>

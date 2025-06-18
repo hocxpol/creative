@@ -370,6 +370,9 @@ const Connections = () => {
 							<TableCell align="center">
 								{i18n.t("connections.table.number")}
 							</TableCell>
+							<TableCell align="center">
+								{i18n.t("connections.table.queues")}
+							</TableCell>
 							<Can
 								role={user.profile}
 								perform="connections-page:actionButtons"
@@ -410,6 +413,9 @@ const Connections = () => {
 											</TableCell>
 											<TableCell align="center">
 												{formatPhoneNumber(whatsApp.number)}
+											</TableCell>
+											<TableCell align="center">
+												{whatsApp.queues ? whatsApp.queues.length : 0}
 											</TableCell>
 											<Can
 												role={user.profile}

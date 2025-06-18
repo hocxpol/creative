@@ -128,30 +128,47 @@ export const remove = async (
   const { messageId } = req.params;
   const { companyId } = req.user;
 
-  const message = await DeleteWhatsAppMessage(messageId);
+  const { message, ticket } = await DeleteWhatsAppMessage(messageId);
 
   const io = getIO();
-  io.to(message.ticketId.toString()).emit(`company-${companyId}-appMessage`, {
+  // Emite o evento de atualização para todos os canais relevantes
+  io.to(message.ticketId.toString())
+    .to(`company-${companyId}-${ticket.status}`)
+    .to(`company-${companyId}-notification`)
+    .to(`company-${companyId}-open`)
+    .to(`company-${companyId}-pending`)
+    .to(`company-${companyId}-mainchannel`)
+    .to(`queue-${ticket.queueId}-${ticket.status}`)
+    .to(`queue-${ticket.queueId}-notification`)
+    .emit(`company-${companyId}-ticket`, {
     action: "update",
-    message
+      ticket,
+      ticketId: ticket.id,
+      message
+  });
+
+  // Emite também o evento appMessage para manter compatibilidade
+  io.to(message.ticketId.toString())
+    .to(`company-${companyId}-${ticket.status}`)
+    .to(`company-${companyId}-notification`)
+    .to(`company-${companyId}-mainchannel`)
+    .emit(`company-${companyId}-appMessage`, {
+      action: "update",
+    message,
+      ticket,
+      ticketId: ticket.id
   });
 
   return res.send();
 };
 
-// Encaminhar
-//export const send = async (req: Request, res: Response): Promise<Response> => {
-//  const { whatsappId } = req.params as unknown as { whatsappId: number };
-//  const messageData: MessageData = req.body;
-//  const medias = req.files as Express.Multer.File[];
-  export const send = async (req: RequestWithUser, res: Response): Promise<Response> => {
+export const send = async (req: RequestWithUser, res: Response): Promise<Response> => {
 	const { whatsappId } = req.params;
 	const messageData = req.body as MessageData;
 	const medias = req.files as any[];
 
   try {
-//    const whatsapp = await Whatsapp.findByPk(whatsappId);
-      const whatsapp = await (Whatsapp as any).findByPk(whatsappId);
+    const whatsapp = await (Whatsapp as any).findByPk(whatsappId);
 
     if (!whatsapp) {
       throw new Error("Não foi possível realizar a operação");
@@ -185,13 +202,10 @@ export const remove = async (
     };
 
     const contact = await CreateOrUpdateContactService(contactData);
-
     const ticket = await FindOrCreateTicketService(contact, whatsapp.id!, 0, companyId);
 
     if (medias) {
       await Promise.all(
-        // Encaminhar
-        // medias.map(async (media: Express.Multer.File) => {
         medias.map(async (media: any) => {
           await req.app.get("queues").messageQueue.add(
             "SendMessage",
@@ -211,12 +225,9 @@ export const remove = async (
     } else {
       await SendWhatsAppMessage({ body: formatBody(body, contact), ticket });
 
-      // Encaminhar
-      // await ticket.update({
       await (ticket as any).update({
         lastMessage: body,
       });
-
     }
 
     if (messageData.closeTicket) {

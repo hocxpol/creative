@@ -226,7 +226,7 @@ const MessageInput = ({ ticketStatus }) => {
 		formData.append("fromMe", true);
 		medias.forEach(media => {
 			formData.append("medias", media);
-			formData.append("body", media.name);
+			formData.append("body", media.description || media.name);
 		});
 
 		try {

@@ -55,6 +55,9 @@ const usePlans = () => {
     }
 
     const getPlanCompany = async (params, id) => {
+        if (!id || id === 'undefined' || id === 'null' || id === undefined || id === null) {
+            throw new Error("ID da empresa é obrigatório e deve ser um valor válido");
+        }
         const { data } = await api.request({
             url: `/companies/listPlan/${id}`,
             method: 'GET',

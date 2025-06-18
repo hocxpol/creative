@@ -30,14 +30,17 @@ const useStyles = makeStyles(theme => ({
 const QueueSelect = ({ selectedQueueIds, onChange, multiple = true, title = i18n.t("queueSelect.inputLabel") }) => {
 	const classes = useStyles();
 	const [queues, setQueues] = useState([]);
+	const companyId = localStorage.getItem("companyId");
 
 	useEffect(() => {
 		fetchQueues();
-	}, []);
+	}, [companyId]);
 
 	const fetchQueues = async () => {
 		try {
-			const { data } = await api.get("/queue");
+			const { data } = await api.get("/queue", {
+				params: { companyId }
+			});
 			setQueues(data);
 		} catch (err) {
 			toastError(err);
@@ -70,6 +73,9 @@ const QueueSelect = ({ selectedQueueIds, onChange, multiple = true, title = i18n
 						getContentAnchorEl: null,
 					}}
 					renderValue={selected => {
+						if (!selected || (Array.isArray(selected) && selected.length === 0)) {
+							return "Nenhum";
+						}
 						return (
 							<div className={classes.chips}>
 								{selected?.length > 0 && multiple ? (
@@ -92,7 +98,7 @@ const QueueSelect = ({ selectedQueueIds, onChange, multiple = true, title = i18n
 						)
 					}}
 				>
-					{!multiple && <MenuItem value={null}>Nenhum</MenuItem>}
+					<MenuItem value={multiple ? [] : null}>Nenhum</MenuItem>
 					{queues.map(queue => (
 						<MenuItem key={queue.id} value={queue.id}>
 							<ListItemIcon style={{ minWidth: 30 }}>

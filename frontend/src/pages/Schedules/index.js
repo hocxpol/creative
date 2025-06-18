@@ -25,6 +25,8 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import SearchIcon from "@material-ui/icons/Search";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Grid, Typography } from "@material-ui/core";
+import AttachFile from "@material-ui/icons/AttachFile";
 
 import "./Schedules.css"; // Importe o arquivo CSS
 
@@ -65,7 +67,7 @@ var defaultMessages = {
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
-    return [...state, ...action.payload];
+    return action.payload;
   }
 
   if (action.type === "UPDATE_SCHEDULES") {
@@ -73,8 +75,9 @@ const reducer = (state, action) => {
     const scheduleIndex = state.findIndex((s) => s.id === schedule.id);
 
     if (scheduleIndex !== -1) {
-      state[scheduleIndex] = schedule;
-      return [...state];
+      const newState = [...state];
+      newState[scheduleIndex] = schedule;
+      return newState;
     } else {
       return [schedule, ...state];
     }
@@ -117,7 +120,8 @@ const Schedules = () => {
   const [schedules, dispatch] = useReducer(reducer, []);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [contactId, setContactId] = useState(+getUrlParam("contactId"));
-
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedScheduleDetails, setSelectedScheduleDetails] = useState(null);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -164,7 +168,7 @@ const Schedules = () => {
     handleOpenScheduleModalFromContactId();
     const socket = socketManager.getSocket(user.companyId);
 
-    socket.on(`company${user.companyId}-schedule`, (data) => {
+    socket.on(`company-${user.companyId}-schedule`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
       }
@@ -237,6 +241,16 @@ const Schedules = () => {
     return str;
   };
 
+  const handleOpenDetailsModal = (schedule) => {
+    setSelectedScheduleDetails(schedule);
+    setDetailsModalOpen(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setSelectedScheduleDetails(null);
+    setDetailsModalOpen(false);
+  };
+
   return (
     <MainContainer>
       <ConfirmationModal
@@ -259,6 +273,99 @@ const Schedules = () => {
         contactId={contactId}
         cleanContact={cleanContact}
       />
+      <Dialog
+        open={detailsModalOpen}
+        onClose={handleCloseDetailsModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Detalhes do Agendamento
+        </DialogTitle>
+        <DialogContent>
+          {selectedScheduleDetails && (
+            <div style={{ padding: '20px' }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1">
+                    <strong>Contato:</strong> {selectedScheduleDetails.contact.name}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1">
+                    <strong>WhatsApp:</strong> {selectedScheduleDetails.whatsapp?.name || "Não definido"}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1">
+                    <strong>Status:</strong> {selectedScheduleDetails.status}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1">
+                    <strong>Data/Hora Programada:</strong> {moment(selectedScheduleDetails.sendAt).format('DD/MM/YYYY HH:mm')}
+                  </Typography>
+                </Grid>
+                {selectedScheduleDetails.sentAt && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1">
+                      <strong>Data/Hora de Envio:</strong> {moment(selectedScheduleDetails.sentAt).format('DD/MM/YYYY HH:mm')}
+                    </Typography>
+                  </Grid>
+                )}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1">
+                    <strong>Mensagem:</strong>
+                  </Typography>
+                  <Paper style={{ padding: '10px', marginTop: '5px' }}>
+                    <Typography variant="body1">
+                      {selectedScheduleDetails.body}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                {selectedScheduleDetails.mediaList && selectedScheduleDetails.mediaList.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1">
+                      <strong>Anexos:</strong>
+                    </Typography>
+                    <Paper style={{ padding: '10px', marginTop: '5px' }}>
+                      {selectedScheduleDetails.mediaList.map((media, index) => (
+                        <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                          <Button
+                            startIcon={<AttachFile />}
+                            onClick={() => {
+                              if (media.path) {
+                                const url = `${process.env.REACT_APP_BACKEND_URL}/public/${media.path}`;
+                                window.open(url, '_blank');
+                              }
+                            }}
+                          >
+                            {media.name}
+                          </Button>
+                        </div>
+                      ))}
+                    </Paper>
+                  </Grid>
+                )}
+              </Grid>
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetailsModal} color="primary">
+            Fechar
+          </Button>
+          <Button 
+            onClick={() => {
+              handleEditSchedule(selectedScheduleDetails);
+              handleCloseDetailsModal();
+            }} 
+            color="primary"
+          >
+            Editar
+          </Button>
+        </DialogActions>
+      </Dialog>
       <MainHeader>
         <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
         <MainHeaderButtonsWrapper>
@@ -288,14 +395,19 @@ const Schedules = () => {
         <Calendar
           messages={defaultMessages}
           formats={{
-          agendaDateFormat: "DD/MM ddd",
-          weekdayFormat: "dddd"
-      }}
+            agendaDateFormat: "DD/MM ddd",
+            weekdayFormat: "dddd"
+          }}
           localizer={localizer}
           events={schedules.map((schedule) => ({
             title: (
               <div className="event-container">
-                <div style={eventTitleStyle}>{schedule.contact.name}</div>
+                <div 
+                  style={eventTitleStyle}
+                  onClick={() => handleOpenDetailsModal(schedule)}
+                >
+                  {schedule.contact.name}
+                </div>
                 <DeleteOutlineIcon
                   onClick={() => handleDeleteSchedule(schedule.id)}
                   className="delete-icon"

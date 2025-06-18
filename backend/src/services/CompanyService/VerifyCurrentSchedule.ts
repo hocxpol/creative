@@ -1,45 +1,98 @@
-import { QueryTypes } from "sequelize";
-import sequelize from "../../database";
+import moment from "moment";
+import Company from "../../models/Company";
+import { isNil } from "lodash";
+import { Op } from "sequelize";
+
+interface Schedule {
+  weekdayEn: string;
+  startTime: string;
+  endTime: string;
+  inActivity: boolean;
+}
 
 type Result = {
   id: number;
-  currentSchedule: [];
+  currentSchedule: {
+    weekdayEn: string;
+    startTime: string;
+    endTime: string;
+    inActivity: boolean;
+  };
   startTime: string;
   endTime: string;
   inActivity: boolean;
 };
 
+const getCurrentWeekday = (): string => {
+  return moment().format("dddd").toLowerCase();
+};
+
 const VerifyCurrentSchedule = async (id: string | number): Promise<Result> => {
-  const sql = `
-    select
-      s.id,
-      s.currentWeekday,
-      s.currentSchedule,
-        (s.currentSchedule->>'startTime')::time "startTime",
-        (s.currentSchedule->>'endTime')::time "endTime",
-        (
-          now()::time >= (s.currentSchedule->>'startTime')::time and
-          now()::time <= (s.currentSchedule->>'endTime')::time
-        ) "inActivity"
-    from (
-      SELECT
-            c.id,
-            to_char(current_date, 'day') currentWeekday,
-            (array_to_json(array_agg(s))->>0)::jsonb currentSchedule
-      FROM "Companies" c, jsonb_array_elements(c.schedules) s
-      WHERE s->>'weekdayEn' like trim(to_char(current_date, 'day')) and c.id = :id
-      GROUP BY 1, 2
-    ) s
-    where s.currentSchedule->>'startTime' not like '' and s.currentSchedule->>'endTime' not like '';
-  `;
-
-  const result: Result = await sequelize.query(sql, {
-    replacements: { id },
-    type: QueryTypes.SELECT,
-    plain: true
+  const company = await Company.findOne({
+    where: { id }
   });
+  
+  if (!company || !company.schedules || company.schedules.length === 0) {
+    return {
+      id: Number(id),
+      currentSchedule: {
+        weekdayEn: getCurrentWeekday(),
+        startTime: "",
+        endTime: "",
+        inActivity: false
+      },
+      startTime: null,
+      endTime: null,
+      inActivity: false
+    };
+  }
 
-  return result;
+  const now = moment();
+  const weekday = now.format("dddd").toLowerCase();
+  const { schedules } = company;
+  
+  let schedule: Schedule | undefined;
+  if (Array.isArray(schedules) && schedules.length > 0) {
+    schedule = schedules.find((s: Schedule) => 
+      s.weekdayEn === weekday && 
+      s.startTime !== "" && 
+      s.startTime !== null && 
+      s.endTime !== "" && 
+      s.endTime !== null
+    );
+  }
+
+  if (!schedule) {
+    return {
+      id: Number(id),
+      currentSchedule: {
+        weekdayEn: weekday,
+        startTime: "",
+        endTime: "",
+        inActivity: false
+      },
+      startTime: null,
+      endTime: null,
+      inActivity: false
+    };
+  }
+
+  const startTime = moment(schedule.startTime, "HH:mm");
+  const endTime = moment(schedule.endTime, "HH:mm");
+  const inActivity = now.isBetween(startTime, endTime);
+
+  return {
+    id: Number(id),
+    currentSchedule: {
+      weekdayEn: weekday,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      inActivity
+    },
+    startTime: schedule.startTime,
+    endTime: schedule.endTime,
+    inActivity
+  };
 };
 
 export default VerifyCurrentSchedule;

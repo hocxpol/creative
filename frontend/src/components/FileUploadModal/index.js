@@ -18,6 +18,7 @@ import {
   LinearProgress,
   Chip,
   TextField,
+  ListItemIcon,
 } from '@material-ui/core';
 import { 
   Delete, 
@@ -30,7 +31,8 @@ import {
   Description,
   ClearAll,
   Edit,
-  DragIndicator
+  DragIndicator,
+  AttachFile,
 } from '@material-ui/icons';
 import { useDropzone } from 'react-dropzone';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
@@ -214,19 +216,25 @@ const getFileIcon = (file) => {
   return <InsertDriveFile />;
 };
 
-const FileUploadModal = ({ open, onClose, onUpload, initialFiles = [] }) => {
+const FileUploadModal = ({ open, onClose, onUpload, initialFiles }) => {
   const classes = useStyles();
   const [files, setFiles] = useState([]);
+  const [descriptions, setDescriptions] = useState({});
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [editingImage, setEditingImage] = useState(null);
   const [editingImageIndex, setEditingImageIndex] = useState(null);
-  const [fileDescriptions, setFileDescriptions] = useState({});
 
   useEffect(() => {
-    if (initialFiles.length > 0) {
+    if (initialFiles) {
       setFiles(initialFiles);
+      // Inicializa as descrições com o nome do arquivo
+      const initialDescriptions = {};
+      initialFiles.forEach((file, index) => {
+        initialDescriptions[index] = file.description || file.name;
+      });
+      setDescriptions(initialDescriptions);
     }
   }, [initialFiles]);
 
@@ -264,7 +272,7 @@ const FileUploadModal = ({ open, onClose, onUpload, initialFiles = [] }) => {
 
   const handleRemoveFile = (index) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-    setFileDescriptions(prev => {
+    setDescriptions(prev => {
       const newDescriptions = { ...prev };
       delete newDescriptions[index];
       return newDescriptions;
@@ -273,14 +281,14 @@ const FileUploadModal = ({ open, onClose, onUpload, initialFiles = [] }) => {
 
   const handleClearAll = () => {
     setFiles([]);
-    setFileDescriptions({});
+    setDescriptions({});
     setError('');
   };
 
-  const handleDescriptionChange = (index, description) => {
-    setFileDescriptions(prev => ({
+  const handleDescriptionChange = (index, value) => {
+    setDescriptions(prev => ({
       ...prev,
-      [index]: description
+      [index]: value
     }));
   };
 
@@ -300,15 +308,14 @@ const FileUploadModal = ({ open, onClose, onUpload, initialFiles = [] }) => {
     }, 200);
 
     try {
-      // Adiciona as descrições aos arquivos antes do upload
       const filesWithDescriptions = files.map((file, index) => ({
         file,
-        description: fileDescriptions[index] || file.name
+        description: descriptions[index] || file.name
       }));
       
       await onUpload(filesWithDescriptions);
       setFiles([]);
-      setFileDescriptions({});
+      setDescriptions({});
       onClose();
     } catch (err) {
       setError(i18n.t('fileUploadModal.errors.uploadFailed'));
@@ -391,13 +398,13 @@ const FileUploadModal = ({ open, onClose, onUpload, initialFiles = [] }) => {
     const newDescriptions = {};
     items.forEach((_, index) => {
       const oldIndex = files.findIndex(file => file === items[index]);
-      if (oldIndex !== -1 && fileDescriptions[oldIndex] !== undefined) {
-        newDescriptions[index] = fileDescriptions[oldIndex];
+      if (oldIndex !== -1 && descriptions[oldIndex] !== undefined) {
+        newDescriptions[index] = descriptions[oldIndex];
       }
     });
 
     setFiles(items);
-    setFileDescriptions(newDescriptions);
+    setDescriptions(newDescriptions);
   };
 
   return (
@@ -491,7 +498,7 @@ const FileUploadModal = ({ open, onClose, onUpload, initialFiles = [] }) => {
                                   <TextField
                                     size="small"
                                     placeholder={i18n.t('fileUploadModal.descriptionPlaceholder')}
-                                    value={fileDescriptions[index] || ''}
+                                    value={descriptions[index] || ''}
                                     onChange={(e) => handleDescriptionChange(index, e.target.value)}
                                     margin="dense"
                                     variant="outlined"

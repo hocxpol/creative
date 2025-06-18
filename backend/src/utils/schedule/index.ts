@@ -1,10 +1,12 @@
 import { isNil } from "lodash";
+import moment from "moment";
 
 interface Schedule {
   weekdayEn: string;
   startTime: string;
   endTime: string;
   inActivity?: boolean;
+  currentSchedule?: boolean;
 }
 
 const weekdays = {
@@ -17,37 +19,17 @@ const weekdays = {
   sunday: "Domingo"
 };
 
-const formatTime = (time: string): string => {
-  if (!time) return "";
-  // Remove any non-digit characters
-  const digits = time.replace(/\D/g, "");
-  // Add colon between hours and minutes
-  return digits.length === 4 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : time;
-};
-
+// Função simplificada para formatar os horários
 export const formatScheduleInfo = (schedules: Schedule[]): string => {
-  if (!Array.isArray(schedules) || schedules.length === 0) {
-    return "";
-  }
+  if (!Array.isArray(schedules) || schedules.length === 0) return "";
 
-  const scheduleLines = schedules
+  return schedules
     .filter(s => s.startTime && s.endTime)
-    .map(s => {
-      const weekday = weekdays[s.weekdayEn as keyof typeof weekdays] || s.weekdayEn;
-      const startTime = formatTime(s.startTime);
-      const endTime = formatTime(s.endTime);
-      return `${weekday}: ${startTime} - ${endTime}`;
-    });
-
-  return scheduleLines.join("\n");
+    .map(s => `${weekdays[s.weekdayEn] || s.weekdayEn}: ${s.startTime} - ${s.endTime}`)
+    .join("\n");
 };
 
-export const formatOutOfHoursMessage = (message: string | null, scheduleInfo: string): string | null => {
-  if (!message) return null;
+// Função simplificada para formatar mensagem
+export const formatOutOfHoursMessage = (message: string, scheduleInfo: string): string => {
   return `${message}\n\n*Horários de Funcionamento:*\n\n${scheduleInfo}`;
-};
-
-export const isOutOfHours = (schedule: Schedule | null): boolean => {
-  if (isNil(schedule)) return false;
-  return !schedule || schedule.inActivity === false;
 }; 

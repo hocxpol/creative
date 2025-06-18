@@ -63,7 +63,7 @@ const PromptSchema = Yup.object().shape({
     max_tokens: Yup.number().required("Informe o número máximo de tokens"),
     temperature: Yup.number().required("Informe a temperatura"),
     apikey: Yup.string().required("Informe a API Key"),
-    queueId: Yup.number().required("Informe a fila"),
+    queueId: Yup.number().required("Informe o departamento"),
     max_messages: Yup.number().required("Informe o número máximo de mensagens")
 });
 

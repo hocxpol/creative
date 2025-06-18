@@ -5,8 +5,12 @@ import GetTicketWbot from "../../helpers/GetTicketWbot";
 import GetWbotMessage from "../../helpers/GetWbotMessage";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
+import Contact from "../../models/Contact";
+import Queue from "../../models/Queue";
+import User from "../../models/User";
+import Whatsapp from "../../models/Whatsapp";
 
-const DeleteWhatsAppMessage = async (messageId: string): Promise<Message> => {
+const DeleteWhatsAppMessage = async (messageId: string): Promise<{ message: Message; ticket: Ticket }> => {
   const message = await Message.findByPk(messageId, {
     include: [
       {
@@ -45,7 +49,25 @@ const DeleteWhatsAppMessage = async (messageId: string): Promise<Message> => {
   }
   await message.update({ isDeleted: true });
 
-  return message;
+  // Atualiza o campo lastMessage do ticket se a mensagem apagada for a última
+  if (ticket && ticket.lastMessage === message.body) {
+    await ticket.update({ lastMessage: "Essa mensagem foi apagada pelo contato." });
+  }
+  // Recarrega o ticket com todas as associações necessárias
+  const updatedTicket = await Ticket.findByPk(ticket.id, {
+    include: [
+      { model: Contact, as: "contact" },
+      { model: Queue, as: "queue" },
+      { model: User, as: "user" },
+      { model: Whatsapp, as: "whatsapp" }
+    ]
+  });
+
+  if (!updatedTicket) {
+    throw new AppError("Error reloading ticket after message deletion");
+  }
+
+  return { message, ticket: updatedTicket };
 };
 
 export default DeleteWhatsAppMessage;

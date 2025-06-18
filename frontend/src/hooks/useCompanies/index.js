@@ -28,6 +28,9 @@ const useCompanies = () => {
     }
 
     const find = async (id) => {
+        if (!id) {
+            throw new Error("Company ID is required");
+        }
         const { data } = await api.request({
             url: `/companies/${id}`,
             method: 'GET'
@@ -36,6 +39,9 @@ const useCompanies = () => {
     }
 
     const finding = async (id) => {
+        if (!id) {
+            throw new Error("Company ID is required");
+        }
         const { data } = await api.request({
             url: `/companies/${id}`,
             method: 'GET'
@@ -43,8 +49,10 @@ const useCompanies = () => {
         return data;
     }
 
-
     const update = async (data) => {
+        if (!data.id) {
+            throw new Error("Company ID is required");
+        }
         const { data: responseData } = await api.request({
             url: `/companies/${data.id}`,
             method: 'PUT',
@@ -54,6 +62,9 @@ const useCompanies = () => {
     }
 
     const remove = async (id) => {
+        if (!id) {
+            throw new Error("Company ID is required");
+        }
         const { data } = await api.request({
             url: `/companies/${id}`,
             method: 'DELETE'
@@ -62,6 +73,9 @@ const useCompanies = () => {
     }
 
     const updateSchedules = async (data) => {
+        if (!data.id) {
+            throw new Error("Company ID is required");
+        }
         const { data: responseData } = await api.request({
             url: `/companies/${data.id}/schedules`,
             method: 'PUT',

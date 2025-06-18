@@ -64,7 +64,7 @@ export const getMessageOptions = async (
     if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
-        caption: body ? body : '',
+        caption: body ? body : null,
         fileName: fileName
         // gifPlayback: true
       };
@@ -129,7 +129,7 @@ const SendWhatsAppMedia = async ({
     let options: AnyMessageContent;
     
     // Usa o corpo da mensagem se existir, caso contrário usa o nome do arquivo
-    const bodyMessage = body ? body : media.originalname;
+    const bodyMessage = body ? formatBody(body, ticket.contact) : formatBody(media.originalname, ticket.contact);
 
     if (typeMessage === "video") {
       options = {
@@ -170,7 +170,7 @@ const SendWhatsAppMedia = async ({
     } else {
       options = {
         image: fs.readFileSync(pathMedia),
-        caption: bodyMessage,
+        caption: bodyMessage
       };
     }
 
@@ -187,6 +187,26 @@ const SendWhatsAppMedia = async ({
     );
 
     await ticket.update({ lastMessage: bodyMessage });
+
+    // Adiciona a mensagem ao banco de dados com o body correto
+    const CreateMessageService = (await import("../MessageServices/CreateMessageService")).default;
+    await CreateMessageService({
+      messageData: {
+        id: sentMessage.key.id,
+        ticketId: ticket.id,
+        contactId: undefined, // para mensagens enviadas pelo sistema
+        body: bodyMessage, // mantém o corpo da mensagem original
+        fromMe: true,
+        read: true,
+        mediaUrl: media.filename,
+        mediaType: typeMessage,
+        ack: sentMessage.status || 1,
+        remoteJid: ticket.contact.number,
+        participant: null,
+        dataJson: JSON.stringify(sentMessage),
+      },
+      companyId: ticket.companyId,
+    });
 
     return sentMessage;
   } catch (err) {

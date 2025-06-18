@@ -21,6 +21,32 @@ import * as Sentry from "@sentry/node";
 import QueueOption from "../../models/QueueOption";
 import { Sequelize } from "sequelize";
 import { formatScheduleInfo, formatOutOfHoursMessage } from "../schedule";
+import VerifyCurrentSchedule from "../../services/QueueService/VerifyCurrentSchedule";
+
+const checkQueueSchedule = async (
+  wbot: Session,
+  ticket: Ticket,
+  contact: Contact,
+  queue: Queue
+): Promise<boolean> => {
+  if (queue?.outOfHoursMessage) {
+    const queueSchedule = await VerifyCurrentSchedule(queue.id);
+    if (!queueSchedule.inActivity) {
+      const scheduleInfo = formatScheduleInfo(queue.schedules);
+      const body = formatBody(
+        `*${queue.name}*\n\n${queue.outOfHoursMessage}\n\n*Horários de Funcionamento:*\n\n${scheduleInfo}\n\n*[ # ]* - Menu inicial`,
+        ticket.contact
+      );
+      const sentMessage = await wbot.sendMessage(
+        `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+        { text: body }
+      );
+      await verifyMessage(sentMessage, ticket, contact);
+      return true;
+    }
+  }
+  return false;
+};
 
 export const verifyQueue = async (
     wbot: Session,
@@ -31,8 +57,25 @@ export const verifyQueue = async (
   ) => {
     try {
       const timestamp = new Date().toISOString();
-
       const companyId = ticket.companyId;
+
+      // Verifica o horário se o ticket já está em uma fila
+      if (ticket.queueId) {
+        const scheduleType = await Setting.findOne({
+          where: {
+            companyId,
+            key: "scheduleType"
+          }
+        });
+
+        if (scheduleType && scheduleType.value === "queue") {
+          const queue = await Queue.findByPk(ticket.queueId);
+          if (queue) {
+            const isOutOfHours = await checkQueueSchedule(wbot, ticket, contact, queue);
+            if (isOutOfHours) return;
+          }
+        }
+      }
   
       // Verifica se o ticket já está em uma fila e não está pendente
       if (ticket.queueId && ticket.status !== "pending") {
@@ -69,32 +112,9 @@ export const verifyQueue = async (
           // Se o tipo de horário for "queue", verifica o horário da fila
           if (scheduleType.value === "queue") {
             const queue = await Queue.findByPk(choosenQueue.id);
-            const { schedules }: any = queue;
-            const now = moment();
-            const weekday = now.format("dddd").toLowerCase();
-            let schedule;
-            
-            if (Array.isArray(schedules) && schedules.length > 0) {
-              schedule = schedules.find((s) => s.weekdayEn === weekday && s.startTime !== "" && s.startTime !== null && s.endTime !== "" && s.endTime !== null);
-            }
-
-            if (queue.outOfHoursMessage !== null && queue.outOfHoursMessage !== "" && !isNil(schedule)) {
-              const startTime = moment(schedule.startTime, "HH:mm");
-              const endTime = moment(schedule.endTime, "HH:mm");
-
-              if (now.isBefore(startTime) || now.isAfter(endTime)) {
-                const scheduleInfo = formatScheduleInfo(schedules);
-                const body = formatBody(
-                  `*${queue.name}*\n\n${queue.outOfHoursMessage}\n\n*Horários de Funcionamento:*\n${scheduleInfo}\n\n*[ # ]* - Menu inicial`,
-                  ticket.contact
-                );
-                const sentMessage = await wbot.sendMessage(
-                  `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-                  { text: body }
-                );
-                await verifyMessage(sentMessage, ticket, contact);
-                return;
-              }
+            if (queue) {
+              const isOutOfHours = await checkQueueSchedule(wbot, ticket, contact, queue);
+              if (isOutOfHours) return;
             }
           }
           // Se o tipo de horário for "company", não verifica o horário da fila
@@ -125,6 +145,7 @@ export const verifyQueue = async (
           }
         });
   
+        // Envia mensagem de saudação se configurado e existir mensagem
         if (greetingMessage.length > 1 && sendGreetingMessageOneQueues?.value === "enabled") {
           const body = formatBody(`${greetingMessage}`, contact);
   
@@ -181,7 +202,74 @@ export const verifyQueue = async (
   
       const selectedOption = getBodyMessage(msg);
       const choosenQueue = visibleQueues[+selectedOption - 1];
-  
+
+      // Verifica se o usuário quer voltar ao menu principal
+      if (selectedOption === "0" || selectedOption === "#") {
+        // Limpa a fila atual
+        await UpdateTicketService({
+          ticketData: { 
+            queueId: null,
+            chatbot: false,
+            queueOptionId: null
+          },
+          ticketId: ticket.id,
+          companyId: ticket.companyId
+        });
+
+        // Envia o menu principal novamente
+        const botText = async () => {
+          let options = "";
+          visibleQueues.forEach((queue, index) => {
+            options += `*[ ${index + 1} ]* - ${queue.name}\n`;
+          });
+          options += `\n*[ # ]* - Menu inicial`;
+
+          const textMessage = {
+            text: formatBody(`\u200e${greetingMessage}\n\n${options}`, contact),
+          };
+
+          const debouncedSentMessage = debounce(
+            async () => {
+              const sendMsg = await wbot.sendMessage(
+                `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+                textMessage
+              );
+              await verifyMessage(sendMsg, ticket, contact);
+            },
+            1500,
+            ticket.id
+          );
+          debouncedSentMessage();
+        };
+
+        await botText();
+        return;
+      }
+
+      // Se a fila não tem opções, mostra mensagem com opções de navegação
+      if (choosenQueue && (!choosenQueue.options || choosenQueue.options.length === 0)) {
+        // Atualiza o ticket com a fila selecionada
+        await UpdateTicketService({
+          ticketData: { 
+            queueId: choosenQueue.id,
+            status: "pending",
+            chatbot: true
+          },
+          ticketId: ticket.id,
+          companyId: ticket.companyId
+        });
+
+        const body = formatBody(
+          `\u200e*${choosenQueue.name}*\n\n${choosenQueue.greetingMessage}\n\n*[ 0 ]* - Menu anterior\n*[ # ]* - Menu inicial`,
+          ticket.contact
+        );
+        await wbot.sendMessage(
+          `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
+          { text: body }
+        );
+        return;
+      }
+
       const buttonActive = await Setting.findOne({
         where: {
           key: "chatBotType",

@@ -244,6 +244,9 @@ const TicketListItemCustom = ({ ticket, onTicketSelect, onTicketClose }) => {
         promptId: null,
         integrationId: null
       });
+      
+      // Força atualização do estado local
+      setCurrentTicket({ id: null, uuid: null, code: null });
     } catch (err) {
       setLoading(false);
       toastError(err);
@@ -285,6 +288,9 @@ const TicketListItemCustom = ({ ticket, onTicketSelect, onTicketClose }) => {
         userId: user?.id,
         queueId: ticket?.queue?.id
       });
+      
+      // Força atualização do estado local
+      setCurrentTicket({ id: null, uuid: null, code: null });
     } catch (err) {
       setLoading(false);
       toastError(err);
@@ -295,46 +301,41 @@ const TicketListItemCustom = ({ ticket, onTicketSelect, onTicketClose }) => {
     history.push(`/tickets/${ticket.uuid}`);
   };
 
-    const handleAcepptTicket = async (id) => {
-        setLoading(true);
-        try {
-            await api.put(`/tickets/${id}`, {
-                status: "open",
-                userId: user?.id,
-            });
-            
-            let settingIndex;
-
-            try {
-                const { data } = await api.get("/settings/");
-                
-                settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
-                
-            } catch (err) {
-                toastError(err);
-                   
-            }
-            
-            if (settingIndex[0].value === "enabled" && !ticket.isGroup) {
-                handleSendMessage(ticket.id);
-                
-            }
-
-        } catch (err) {
-            setLoading(false);
-            
-            toastError(err);
-        }
-        if (isMounted.current) {
-            setLoading(false);
-        }
-
+  const handleAcepptTicket = async (id) => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "open",
+        userId: user?.id,
+      });
+      
+      // Força atualização do estado local
+      setCurrentTicket({ id: null, uuid: null, code: null });
+      
+      let settingIndex;
+      try {
+        const { data } = await api.get("/settings/");
+        settingIndex = data.filter((s) => s.key === "sendGreetingAccepted");
+      } catch (err) {
+        toastError(err);
+      }
+      
+      if (settingIndex[0].value === "enabled" && !ticket.isGroup) {
+        handleSendMessage(ticket.id);
+      }
+    } catch (err) {
+      setLoading(false);
+      toastError(err);
+    }
+    if (isMounted.current) {
+      setLoading(false);
+    }
         // handleChangeTab(null, "tickets");
         // handleChangeTab(null, "open");
-        history.push(`/tickets/${ticket.uuid}`);
-    };
+    history.push(`/tickets/${ticket.uuid}`);
+  };
 	
-	    const handleSendMessage = async (id) => {
+	const handleSendMessage = async (id) => {
         
         const msg = `{{ms}} *{{name}}*, meu nome é *${user?.name}* e agora vou prosseguir com seu atendimento!`;
         const message = {
@@ -415,7 +416,7 @@ const TicketListItemCustom = ({ ticket, onTicketSelect, onTicketClose }) => {
           [classes.pendingTicket]: ticket.status === "pending",
         })}
       >
-        <Tooltip arrow placement="right" title={ticket.queue?.name?.toUpperCase() || "SEM FILA"} >
+        <Tooltip arrow placement="right" title={ticket.queue?.name?.toUpperCase() || "SEM DEPARTAMENTO"} >
           <span style={{ backgroundColor: ticket.queue?.color || "#7C7C7C" }} className={classes.ticketQueueColor}></span>
         </Tooltip>
         <ListItemAvatar>
@@ -475,7 +476,7 @@ const TicketListItemCustom = ({ ticket, onTicketSelect, onTicketClose }) => {
                 <span className={classes.secondaryContentSecond} >
                   {ticket?.whatsapp?.name ? <Badge className={classes.connectionTag}>{ticket?.whatsapp?.name?.toUpperCase()}</Badge> : <br></br>}
                   {ticketUser ? <Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticketUser}</Badge> : <br></br>}
-                  <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name?.toUpperCase() || "SEM FILA"}</Badge>
+                  <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name?.toUpperCase() || "SEM DEPARTAMENTO"}</Badge>
                 </span>
                 <span style={{ paddingTop: "2px" }} className={classes.secondaryContentSecond} >
                   {tag?.map((tag) => {

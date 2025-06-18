@@ -80,9 +80,8 @@ export const verifyMediaMessage = async (
   ticket: Ticket,
   contact: Contact
 ): Promise<Message> => {
-  const io = getIO();
+  const io = getIO();  
   const media = await downloadMedia(msg);
-
   if (!media) {
     throw new Error("ERR_WAPP_DOWNLOAD_MEDIA");
   }
@@ -93,20 +92,25 @@ export const verifyMediaMessage = async (
   }
 
   try {
-    await writeFileAsync(
-      join(__dirname, "..", "..", "..", "public", media.filename),
-      media.data,
-      "base64"
-    );
+    const filePath = join(__dirname, "..", "..", "..", "public", media.filename);
+    await writeFileAsync(filePath, media.data, "base64");
   } catch (err) {
     Sentry.captureException(err);
-    logger.error(err);
   }
 
-  const body = msg.message?.imageMessage?.caption ||
-               msg.message?.documentMessage?.caption ||
-               msg.message?.documentMessage?.title ||
-               media.filename;
+  let body;
+  if (msg.key.fromMe) {
+    body = msg.message?.videoMessage?.caption || 
+           msg.message?.imageMessage?.caption ||
+           msg.message?.documentMessage?.caption ||
+           msg.message?.documentMessage?.title;
+  } else {
+    body = msg.message?.videoMessage?.caption || 
+           msg.message?.imageMessage?.caption ||
+           msg.message?.documentMessage?.caption ||
+           msg.message?.documentMessage?.title ||
+           media.filename;
+  }
 
   const messageData = {
     id: msg.key.id,

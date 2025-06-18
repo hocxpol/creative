@@ -71,10 +71,16 @@ const CreateTicketService = async ({
 
   const io = getIO();
 
-  io.to(ticket.id.toString()).emit("ticket", {
-    action: "update",
-    ticket
-  });
+  io.to(ticket.id.toString())
+    .to(`company-${ticket.companyId}-${ticket.status}`)
+    .to(`company-${ticket.companyId}-notification`)
+    .to(`queue-${ticket.queueId}-${ticket.status}`)
+    .to(`queue-${ticket.queueId}-notification`)
+    .to(`user-${ticket.userId}`)
+    .emit(`company-${ticket.companyId}-ticket`, {
+      action: "update",
+      ticket
+    });
 
   return ticket;
 };

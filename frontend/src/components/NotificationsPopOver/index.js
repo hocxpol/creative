@@ -166,6 +166,96 @@ const NotificationsPopOver = (volume) => {
 
 				handleNotifications(data);
 			}
+			// Notificação para mensagem apagada
+			if (
+				data.action === "update" &&
+				data.message.isDeleted &&
+				!data.message.fromMe
+			) {
+				const shouldNotNotificate =
+					(data.message.ticketId === ticketIdRef.current &&
+						document.visibilityState === "visible") ||
+					(data.ticket.userId && data.ticket.userId !== user?.id) ||
+					data.ticket.isGroup;
+
+				if (shouldNotNotificate) return;
+
+				const options = {
+					body: data.message.body || "Mensagem apagada.",
+					icon: data.contact?.urlPicture,
+					tag: data.ticket.id,
+					renotify: true,
+				};
+
+				const notification = new Notification(
+					`${data.contact?.name || "Contato"} apagou uma mensagem`,
+					options
+				);
+
+				notification.onclick = e => {
+					e.preventDefault();
+					window.focus();
+					historyRef.current.push(`/tickets/${data.ticket.uuid}`);
+				};
+
+				setDesktopNotifications(prevState => {
+					const notfiticationIndex = prevState.findIndex(
+						n => n.tag === notification.tag
+					);
+					if (notfiticationIndex !== -1) {
+						prevState[notfiticationIndex] = notification;
+						return [...prevState];
+					}
+					return [notification, ...prevState];
+				});
+
+				soundAlertRef.current();
+			}
+			// Notificação para mensagem editada
+			if (
+				data.action === "update" &&
+				(data.message.isEdited || data.message.mediaType === "editedMessage") &&
+				!data.message.fromMe
+			) {
+				const shouldNotNotificate =
+					(data.message.ticketId === ticketIdRef.current &&
+						document.visibilityState === "visible") ||
+					(data.ticket.userId && data.ticket.userId !== user?.id) ||
+					data.ticket.isGroup;
+
+				if (shouldNotNotificate) return;
+
+				const options = {
+					body: data.message.body || "Mensagem editada.",
+					icon: data.contact?.urlPicture,
+					tag: data.ticket.id,
+					renotify: true,
+				};
+
+				const notification = new Notification(
+					`${data.contact?.name || "Contato"} editou uma mensagem`,
+					options
+				);
+
+				notification.onclick = e => {
+					e.preventDefault();
+					window.focus();
+					historyRef.current.push(`/tickets/${data.ticket.uuid}`);
+				};
+
+				setDesktopNotifications(prevState => {
+					const notfiticationIndex = prevState.findIndex(
+						n => n.tag === notification.tag
+					);
+					if (notfiticationIndex !== -1) {
+						prevState[notfiticationIndex] = notification;
+						return [...prevState];
+					}
+					return [notification, ...prevState];
+				});
+
+				soundAlertRef.current();
+			}
 		});
 
 		return () => {

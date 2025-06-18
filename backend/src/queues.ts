@@ -28,6 +28,8 @@ import FilesOptions from './models/FilesOptions';
 import { addSeconds, differenceInSeconds } from "date-fns";
 import formatBody from "./helpers/Mustache";
 import { ClosedAllOpenTickets } from "./services/WbotServices/wbotClosedTickets";
+import CreateMessageService from "./services/MessageServices/CreateMessageService";
+import Message from "./models/Message";
 
 
 const nodemailer = require('nodemailer');
@@ -89,7 +91,6 @@ async function handleSendMessage(job) {
     await SendMessage(whatsapp, messageData);
   } catch (e: any) {
     Sentry.captureException(e);
-    logger.error("MessageQueue -> SendMessage: error", e.message);
     throw e;
   }
 }
@@ -201,8 +202,7 @@ async function handleSendMessage(job) {
 async function handleCloseTicketsAutomatic() {
   const job = new CronJob('*/1 * * * *', async () => {
     const companies = await Company.findAll();
-    companies.map(async c => {
-
+    await Promise.all(companies.map(async c => {
       try {
         const companyId = c.id;
         await ClosedAllOpenTickets(companyId);
@@ -211,8 +211,7 @@ async function handleCloseTicketsAutomatic() {
         logger.error("ClosedAllOpenTickets -> Verify: error", e.message);
         throw e;
       }
-
-    });
+    }));
   });
   job.start()
 }
@@ -240,12 +239,10 @@ async function handleVerifySchedules(job) {
           { schedule },
           { delay: 40000 }
         );
-        logger.info(`Disparo agendado para: ${schedule.contact.name}`);
       });
     }
   } catch (e: any) {
     Sentry.captureException(e);
-    logger.error("SendScheduledMessage -> Verify: error", e.message);
     throw e;
   }
 }
@@ -260,37 +257,124 @@ async function handleSendScheduledMessage(job) {
     scheduleRecord = await Schedule.findByPk(schedule.id);
   } catch (e) {
     Sentry.captureException(e);
-    logger.info(`Erro ao tentar consultar agendamento: ${schedule.id}`);
   }
 
   try {
     const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
 
-    let filePath = null;
-    if (schedule.mediaPath) {
-      filePath = path.resolve("public", schedule.mediaPath);
+    // Primeiro envia a mensagem principal
+    const sentMessage = await SendMessage(whatsapp, {
+      number: schedule.contact.number,
+      body: formatBody(schedule.body, schedule.contact)
+    });
+
+    // Registra a mensagem principal no histórico do ticket
+    const messageData = {
+      id: sentMessage.key.id,
+      ticketId: schedule.ticketId,
+      body: formatBody(schedule.body, schedule.contact),
+      contactId: schedule.contactId,
+      fromMe: true,
+      read: true,
+      mediaType: "chat",
+      ack: 2,
+      dataJson: JSON.stringify(sentMessage)
+    };
+
+    const message = await CreateMessageService({ messageData, companyId: schedule.companyId });
+
+    // Configura um timeout para verificar a confirmação de leitura da mensagem principal
+    setTimeout(async () => {
+      try {
+        const updatedMessage = await Message.findByPk(message.id);
+        if (updatedMessage && updatedMessage.ack < 3) {
+          await updatedMessage.update({ read: false });
+          
+          const io = getIO();
+          io.to(`company-${schedule.companyId}-mainchannel`).emit(`company-${schedule.companyId}-appMessage`, {
+            action: "update",
+            message: updatedMessage
+          });
+        }
+      } catch (err) {
+        logger.error(`Erro ao verificar confirmação de leitura: ${err}`);
+        Sentry.captureException(err);
+      }
+    }, 300000);
+
+    // Se houver anexos, envia cada um deles após a mensagem principal
+    if (schedule.mediaList && schedule.mediaList.length > 0) {
+      // Aguarda um pequeno delay antes de começar a enviar os anexos
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      for (let i = 0; i < schedule.mediaList.length; i++) {
+        const media = schedule.mediaList[i];
+        const filePath = path.resolve("public", media.path);
+        
+        // Envia o anexo com sua descrição
+        const sentMediaMessage = await SendMessage(whatsapp, {
+          number: schedule.contact.number,
+          body: media.description || "",
+          mediaPath: filePath,
+          fileName: media.name
+        });
+
+        // Registra a mensagem do anexo no histórico do ticket
+        const mediaMessageData = {
+          id: sentMediaMessage.key.id,
+          ticketId: schedule.ticketId,
+          body: media.description || "",
+          contactId: schedule.contactId,
+          fromMe: true,
+          read: true,
+          mediaType: media.type,
+          mediaUrl: media.path,
+          ack: 2,
+          dataJson: JSON.stringify(sentMediaMessage)
+        };
+
+        const mediaMessage = await CreateMessageService({ messageData: mediaMessageData, companyId: schedule.companyId });
+
+        // Configura um timeout para verificar a confirmação de leitura do anexo
+        setTimeout(async () => {
+          try {
+            const updatedMediaMessage = await Message.findByPk(mediaMessage.id);
+            if (updatedMediaMessage && updatedMediaMessage.ack < 3) {
+              await updatedMediaMessage.update({ read: false });
+              
+              const io = getIO();
+              io.to(`company-${schedule.companyId}-mainchannel`).emit(`company-${schedule.companyId}-appMessage`, {
+                action: "update",
+                message: updatedMediaMessage
+              });
+            }
+          } catch (err) {
+            logger.error(`Erro ao verificar confirmação de leitura do anexo: ${err}`);
+            Sentry.captureException(err);
+          }
+        }, 300000);
+
+        // Adiciona um pequeno delay entre os envios dos anexos
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    await SendMessage(whatsapp, {
-      number: schedule.contact.number,
-      body: formatBody(schedule.body, schedule.contact),
-      mediaPath: filePath
-    });
-
-    await scheduleRecord?.update({
-      sentAt: moment().format("YYYY-MM-DD HH:mm"),
-      status: "ENVIADA"
-    });
-
-    logger.info(`Mensagem agendada enviada para: ${schedule.contact.name}`);
-    sendScheduledMessages.clean(15000, "completed");
-  } catch (e: any) {
-    Sentry.captureException(e);
-    await scheduleRecord?.update({
-      status: "ERRO"
-    });
-    logger.error("SendScheduledMessage -> SendMessage: error", e.message);
-    throw e;
+    // Atualiza o status do agendamento
+    if (scheduleRecord) {
+      await scheduleRecord.update({
+        status: "ENVIADA",
+        sentAt: new Date()
+      });
+    }
+  } catch (err) {
+    logger.error(`Erro ao enviar mensagem agendada: ${err}`);
+    Sentry.captureException(err);
+    
+    if (scheduleRecord) {
+      await scheduleRecord.update({
+        status: "ERRO"
+      });
+    }
   }
 }
 
@@ -305,18 +389,12 @@ async function handleVerifyCampaigns(job) {
     where "scheduledAt" between now() and now() + '1 hour'::interval and status = 'PROGRAMADA'`,
       { type: QueryTypes.SELECT }
     );
-
-  if (campaigns.length > 0)
-    logger.info(`Campanhas encontradas: ${campaigns.length}`);
   
   for (let campaign of campaigns) {
     try {
       const now = moment();
       const scheduledAt = moment(campaign.scheduledAt);
       const delay = scheduledAt.diff(now, "milliseconds");
-      logger.info(
-        `Campanha enviada para a fila de processamento: Campanha=${campaign.id}, Delay Inicial=${delay}`
-      );
       campaignQueue.add(
         "ProcessCampaign",
         {
@@ -781,7 +859,6 @@ async function handleLoginStatus(job) {
     try {
       const user = await User.findByPk(item.id);
       await user.update({ online: false });
-      logger.info(`Usuário passado para offline: ${item.id}`);
     } catch (e: any) {
       Sentry.captureException(e);
     }

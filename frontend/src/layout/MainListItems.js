@@ -45,6 +45,7 @@ import { AllInclusive, AttachFile, BlurCircular, DeviceHubOutlined, Schedule } f
 import usePlans from "../hooks/usePlans";
 import Typography from "@material-ui/core/Typography";
 import useVersion from "../hooks/useVersion";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
   ListSubheader: {
@@ -180,20 +181,30 @@ const MainListItems = (props) => {
 
   useEffect(() => {
     async function fetchData() {
-      const companyId = user.companyId;
-      const planConfigs = await getPlanCompany(undefined, companyId);
-
-      setShowCampaigns(planConfigs.plan.useCampaigns);
-      setShowKanban(planConfigs.plan.useKanban);
-      setShowOpenAi(planConfigs.plan.useOpenAi);
-      setShowIntegrations(planConfigs.plan.useIntegrations);
-      setShowSchedules(planConfigs.plan.useSchedules);
-      setShowInternalChat(planConfigs.plan.useInternalChat);
-      setShowExternalApi(planConfigs.plan.useExternalApi);
+      try {
+        const companyId = user?.companyId;
+        if (!companyId) {
+          toast.error("Company ID is required");
+          return;
+        }
+        const planConfigs = await getPlanCompany(undefined, companyId);
+        if (planConfigs) {
+          setShowCampaigns(planConfigs.plan.useCampaigns);
+          setShowKanban(planConfigs.plan.useKanban);
+          setShowOpenAi(planConfigs.plan.useOpenAi);
+          setShowIntegrations(planConfigs.plan.useIntegrations);
+          setShowSchedules(planConfigs.plan.useSchedules);
+          setShowInternalChat(planConfigs.plan.useInternalChat);
+          setShowExternalApi(planConfigs.plan.useExternalApi);
+        }
+      } catch (err) {
+        toastError(err);
+      }
     }
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (user?.companyId) {
+      fetchData();
+    }
+  }, [user?.companyId]);
 
 
 
@@ -581,7 +592,7 @@ const MainListItems = (props) => {
 										color: "rgba(0, 0, 0, 0.54)"
 									}}
 								>
-									{`v${version || '6.0.0'}`}
+									{`v${version}`}
 								</Typography>
 							</React.Fragment>
 						)}

@@ -19,8 +19,8 @@ scheduleRoutes.get("/schedules/:scheduleId", isAuth, ScheduleController.show);
 
 scheduleRoutes.delete("/schedules/:scheduleId", isAuth, ScheduleController.remove);
 
-scheduleRoutes.post("/schedules/:id/media-upload", isAuth, upload.array("file"), ScheduleController.mediaUpload);
+scheduleRoutes.post("/schedules/:id/media-upload", isAuth, upload.array("files"), ScheduleController.mediaUpload);
 
-scheduleRoutes.delete("/schedules/:id/media-upload", isAuth, ScheduleController.deleteMedia);
+scheduleRoutes.delete("/schedules/:id/media/:index", isAuth, ScheduleController.deleteMedia);
 
 export default scheduleRoutes;

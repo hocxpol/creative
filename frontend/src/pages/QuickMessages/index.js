@@ -130,7 +130,7 @@ const Quickemessages = () => {
     const companyId = user.companyId;
     const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company${companyId}-quickemessage`, (data) => {
+    socket.on(`company-${companyId}-quickemessage`, (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_QUICKMESSAGES", payload: data.record });
       }
@@ -184,7 +184,7 @@ const Quickemessages = () => {
   const handleDeleteQuickemessage = async (quickemessageId) => {
     try {
       await api.delete(`/quick-messages/${quickemessageId}`);
-      toast.success(i18n.t("quickemessages.toasts.deleted"));
+      toast.success(i18n.t("quickMessages.toasts.deleted"));
     } catch (err) {
       toastError(err);
     }
@@ -281,6 +281,9 @@ const Quickemessages = () => {
                 {i18n.t("quickMessages.table.mediaName")}
               </TableCell>        
               <TableCell align="center">
+                {i18n.t("quickMessages.table.visibility")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("quickMessages.table.actions")}
               </TableCell>
             </TableRow>
@@ -293,6 +296,11 @@ const Quickemessages = () => {
 
                   <TableCell align="center">
                     {quickemessage.mediaName ?? i18n.t("quickMessages.noAttachment")}
+                  </TableCell>
+                  <TableCell align="center">
+                    {quickemessage.visibility === "all" 
+                      ? i18n.t("quickMessages.visibilityAll") 
+                      : i18n.t("quickMessages.visibilityMe")}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
@@ -315,7 +323,7 @@ const Quickemessages = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={3} />}
+              {loading && <TableRowSkeleton columns={4} />}
             </>
           </TableBody>
         </Table>

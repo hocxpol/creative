@@ -146,15 +146,17 @@ const Push = (msg: proto.IWebMessageInfo) => {
 
 const wbotMessageListener = async (wbot: Session, companyId: number): Promise<void> => {
   try {
-    wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {
+    wbot.ev.on("messages.upsert", async (messageUpsert: ImessageUpsert) => {    
       const messages = messageUpsert.messages
         .filter(filterMessages)
         .map(msg => msg);
 
-      if (!messages.length) return;
+      if (!messages.length) {
+        return;
+      }
 
       for (const message of messages) {
-        try {
+        try {          
           const messageExists = await Message.count({
             where: { id: message.key.id!, companyId }
           });
@@ -165,7 +167,6 @@ const wbotMessageListener = async (wbot: Session, companyId: number): Promise<vo
             await verifyCampaignMessageAndCloseTicket(message, companyId);
           }
         } catch (error) {
-          logger.error(`[MessageListener] Erro ao processar mensagem ${message.key.id}: ${error}`);
           Sentry.captureException(error);
         }
       }
@@ -173,13 +174,12 @@ const wbotMessageListener = async (wbot: Session, companyId: number): Promise<vo
 
     wbot.ev.on("messages.update", (messageUpdate: WAMessageUpdate[]) => {
       if (messageUpdate.length === 0) return;
-      
+            
       messageUpdate.forEach(async (message: WAMessageUpdate) => {
         try {
           (wbot as WASocket)!.readMessages([message.key]);
           await handleMsgAck(message, message.update.status);
         } catch (error) {
-          logger.error(`[MessageListener] Erro ao atualizar status da mensagem ${message.key.id}: ${error}`);
           Sentry.captureException(error);
         }
       });
@@ -189,7 +189,6 @@ const wbotMessageListener = async (wbot: Session, companyId: number): Promise<vo
     //   messageSet.messages.filter(filterMessages).map(msg => msg);
     // });
   } catch (error) {
-    logger.error(`[MessageListener] Erro no listener de mensagens: ${error}`);
     Sentry.captureException(error);
   }
 };

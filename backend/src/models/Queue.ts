@@ -26,7 +26,7 @@ import Prompt from "./Prompt";
 import QueueIntegrations from "./QueueIntegrations";
 
 @Table
-class Queue extends Model<Queue> {
+class Queue extends Model {
   @PrimaryKey
   @AutoIncrement
   @Column
@@ -53,7 +53,12 @@ class Queue extends Model<Queue> {
   @Column({
     type: DataType.JSONB
   })
-  schedules: [];
+  schedules: Array<{
+    weekdayEn: string;
+    startTime: string;
+    endTime: string;
+    weekday: string;
+  }>;
 
   @CreatedAt
   createdAt: Date;

@@ -21,6 +21,7 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
 import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { SocketContext } from "../../context/Socket/SocketContext";
 import toastError from "../../errors/toastError";
 
 const useStyles = makeStyles((theme) => ({
@@ -99,15 +100,30 @@ const useStyles = makeStyles((theme) => ({
     top: "0%",
     left: "0%",
   },
+  deletedMessage: {
+    fontStyle: "italic",
+    color: "rgba(0, 0, 0, 0.36)",
+  },
+
+  editedMessage: {
+    color: "#888",
+    fontStyle: "italic",
+  }
 }));
 
-const TicketListItem = ({ ticket }) => {
+const TicketListItem = ({ ticket: initialTicket }) => {
   const classes = useStyles();
   const history = useHistory();
   const [loading, setLoading] = useState(false);
   const { ticketId } = useParams();
   const isMounted = useRef(true);
   const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
+  const [ticket, setTicket] = useState(initialTicket);
+
+  useEffect(() => {
+    setTicket(initialTicket);
+  }, [initialTicket]);
 
   useEffect(() => {
     return () => {
@@ -115,7 +131,43 @@ const TicketListItem = ({ ticket }) => {
     };
   }, []);
 
-  const handleAcepptTicket = async (ticket) => {
+  useEffect(() => {
+    const companyId = localStorage.getItem("companyId");
+    const socket = socketManager.getSocket(companyId);
+
+    const handleTicketUpdate = (data) => {
+      if (data.action === "update" && data.ticket.id === ticket.id) {
+        setTicket(prevTicket => ({
+          ...prevTicket,
+          ...data.ticket,
+          lastMessage: data.ticket.lastMessage || prevTicket.lastMessage,
+          updatedAt: data.ticket.updatedAt || prevTicket.updatedAt
+        }));
+      }
+    };
+
+    const handleAppMessage = (data) => {
+      if (data.action === "update" && data.message?.ticketId === ticket.id && data.ticket) {
+        setTicket(prevTicket => ({
+          ...prevTicket,
+          ...data.ticket,
+          lastMessage: data.message.isDeleted ? "Essa mensagem foi apagada pelo contato." : data.ticket.lastMessage,
+          updatedAt: data.ticket.updatedAt || prevTicket.updatedAt
+        }));
+      }
+    };
+
+    if (socket) {
+    socket.on(`company-${companyId}-ticket`, handleTicketUpdate);
+    socket.on(`company-${companyId}-appMessage`, handleAppMessage);
+
+    return () => {
+      socket.off(`company-${companyId}-ticket`, handleTicketUpdate);
+      socket.off(`company-${companyId}-appMessage`, handleAppMessage);
+    };
+    }
+  }, [ticket.id, socketManager]);
+  const handleAcepptTicket = async () => {
     setLoading(true);
     try {
       await api.put(`/tickets/${ticket.id}`, {
@@ -132,18 +184,46 @@ const TicketListItem = ({ ticket }) => {
     history.push(`/tickets/${ticket.uuid}`);
   };
 
-  const handleSelectTicket = (ticket) => {
+  const handleSelectTicket = () => {
     history.push(`/tickets/${ticket.uuid}`);
   };
 
+  const renderLastMessage = () => {
+    if (!ticket.lastMessage) {
+      return <MarkdownWrapper></MarkdownWrapper>;
+    }
+
+    // Mensagem apagada
+    if (ticket.lastMessage.includes("Essa mensagem foi apagada")) {
+      return (
+        <span className={classes.deletedMessage}>
+          {ticket.lastMessage}
+        </span>
+      );
+    }
+
+    // Mensagem editada
+    if (ticket.lastMessage.includes("(Mensagem editada)")) {
+      const originalMessage = ticket.lastMessage.replace("(Mensagem editada)", "").trim();
+      return (
+        <span>
+          <MarkdownWrapper>{originalMessage}</MarkdownWrapper>
+          <span className={classes.editedMessage}> (editada)</span>
+        </span>
+      );
+    }
+
+    return <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>;
+  };
+
   return (
-    <React.Fragment key={ticket.id}>
+    <React.Fragment>
       <ListItem
         dense
         button
         onClick={(e) => {
           if (ticket.status === "pending") return;
-          handleSelectTicket(ticket);
+          handleSelectTicket();
         }}
         selected={ticketId && +ticketId === ticket.id}
         className={clsx(classes.ticket, {
@@ -153,7 +233,7 @@ const TicketListItem = ({ ticket }) => {
         <Tooltip
           arrow
           placement="right"
-          title={ticket.queue?.name || "Sem fila"}
+          title={ticket.queue?.name || i18n.t("messagesList.header.without.queue")}
         >
           <span
             style={{ backgroundColor: ticket.queue?.color || "#7C7C7C" }}
@@ -182,7 +262,7 @@ const TicketListItem = ({ ticket }) => {
                   color="primary"
                 />
               )}
-{/*               {ticket.lastMessage && (
+              {ticket.lastMessage && (
                 <Typography
                   className={classes.lastMessageTime}
                   component="span"
@@ -195,10 +275,10 @@ const TicketListItem = ({ ticket }) => {
                     <>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
                   )}
                 </Typography>
-              )} */}
+              )}
             </span>
           }
-/*           secondary={
+          secondary={
             <span className={classes.contactNameWrapper}>
               <Typography
                 className={classes.contactLastMessage}
@@ -207,11 +287,7 @@ const TicketListItem = ({ ticket }) => {
                 variant="body2"
                 color="textSecondary"
               >
-                {ticket.lastMessage ? (
-                  <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
-                ) : (
-                  <MarkdownWrapper></MarkdownWrapper>
-                )}
+                {renderLastMessage()}
               </Typography>
 
               <Badge
@@ -222,7 +298,7 @@ const TicketListItem = ({ ticket }) => {
                 }}
               />
             </span>
-          } */
+          }
         />
         {ticket.status === "pending" && (
           <ButtonWithSpinner
@@ -231,7 +307,7 @@ const TicketListItem = ({ ticket }) => {
             className={classes.acceptButton}
             size="small"
             loading={loading}
-            onClick={(e) => handleAcepptTicket(ticket)}
+            onClick={(e) => handleAcepptTicket()}
           >
             {i18n.t("ticketsList.buttons.accept")}
           </ButtonWithSpinner>

@@ -77,7 +77,6 @@ const QueueSchema = Yup.object().shape({
     .max(9, i18n.t("validation.maxLength", { max: 9 }))
     .required(i18n.t("validation.required")),
   greetingMessage: Yup.string()
-    .max(50, i18n.t("validation.maxLength", { max: 50 }))
     .nullable(),
   keyword: Yup.string()
     .max(50, i18n.t("validation.tooLong"))

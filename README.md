@@ -198,30 +198,89 @@ Em validação:
 - Correção toast erros.
 - Correção de Origem em contact drawer.
 - Tipos de uploads
+- Redimensionamento de tela, erro de ticket, exibição do menu lateral.
+- Limite de caracteres na saudação de filas.
+- Evitar cadastro de atalhos repetidos.
+- Mensagem de tradução ao excluir atalho.
+- Correção ao salvar um usuário. Removido {name}.
+- User: Sem Fila "Nenhum", Conexão Padrão "Nenhum".
+- Ver tickets de outros usuários (sem fila).
+- Respostas rápidas com opção de cadastrar para todos ou somente para mim.
+- Correção da rota para acesso ao dashboard somente para admin.
+- Coluna de exibição de mensagens rápidas.
+- Correção de redirecionamento de dashboard.
+- Modal resposta rápida com anexo. Correção.
+- Novo botão de mensagens rápidas.
+- Loading durante mensagens rápidas e traduções.
+- Loading save, upload, tootltips.
+- Remove arquivos ao deletar em mensagens rápidas.
+- Correções da dialog, e texto do vídeo nas mensagens rápidas.
 
----
+- Tema Dark
+- Salvar origem do contato
+- Ver tickets sem fila
+- Status do usuário online / offline
+- Exibir quantidade de filas em conexão
+- Correção agendamento de mensagens que não era salva no ticket do contato.
+- Melhoria no tamanho da modal de agendamento.
+- Correção para salvar a mensagem de conclusão no ticket.
+- Mensagem de conclusão.
+- Mensagem agendada, marcação de leitura.
+- Agendamento funcionando, registrando, modal para ver detalhes.
+- Correção da ordem de envio da mensagem de encerramento por inatividade.
+- Remoção do espaço em inicio de frase de inatividade.
+- Filas alterado para Departamentos.
+- Faz atualização correta ao criar um novo ticket.
+- Mensagem rápida com vídeo e texto.
+- Correção ao transferir ticket, ao fechar, ao abrir.
+- Fechamento automático de atendimentos
+- Mensagem editada + Notificações
+- Tradução das mensagens na tela de cadastro
+- Correção de exibição de versão no pré-load
+------------
+Agendamento Chip de Origem | OK
+Agendamento com anexos | OK
+Agendamento Título | OK
+Company-$- (schedule controler) | OK
+Fechamento automático do ticket | OK
+Apagar mensagem | OK
+Alterar mensagem | OK
+Tema Dark | OK
+Input Desabilitado | OK
+Transferencia automatica atualizando automaticamente | OK 
+Evita criar um novo ticket para usuário que já tem ticket aberto | OK
+Loop Infinito página queues devido a company ID | OK
+Navegação em filas/departamentos | OK
+Correção do horário de expediente | OK
+------------
+
 Correções a fazer.
 
-- Mensagem Editada
-- Delay
+- Mensagem completa de sem permissão em fila.
 
--------
-Melhorias Futuras, sem pressa
-- Remoção de logs
-- Traduções
-- Mensagens mais específicas
-- Feedback
+- Atualização do ticket em múlti canais
+- Mostrar os tickets para (para todos)
 
-- Dados de Endereço
-- Sistema de aniversário
-- Admin ver todos os dados
-- Tela de configurações avançada
+- Fecha automaticamente a avaliação 3 mensagens ignoradas. / Rating Index
+- Envio de midia usando API Externa + Registro no chat
 
-- Foto maior
-- Criar ticket sem conexão
-
-- vCard
+---------------------------------------------------------------------------------
+- Vcard
 - Reagir
 - Grupos
+- Sistema de pastas
+- Usuários dos Grupos
+- Encaminhar múltiplas mensagens
+- Foto maior
+- Tela de configurações avançada
+- Sistema de aniversário
+- Dados de Endereço
+- Feedback
+- Remoção de logs
+- Traduções
+- Admin ver todos os dados
+
 - Automação na fila VIP
-- Encaminhar multiplas msg
+- Permissão de integração nas abas
+- Criar ticket sem conexão
+- Mensagem Editada

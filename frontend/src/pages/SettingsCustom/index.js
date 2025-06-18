@@ -35,6 +35,30 @@ const useStyles = makeStyles((theme) => ({
   tab: {
     backgroundColor: theme.palette.options,
     borderRadius: 4,
+    padding: 0,
+    minHeight: 48,
+    '& .MuiTabs-flexContainer': {
+      justifyContent: 'flex-start',
+      paddingLeft: 0
+    },
+    '& .MuiTabScrollButton-root': {
+      minWidth: 0,
+      width: 24,
+      padding: 0,
+    },
+    '& svg': {
+      margin: 0,
+    },
+    '& .MuiTab-root': {
+      minWidth: 120,
+      textTransform: 'uppercase',
+      fontWeight: 500,
+      fontSize: '0.875rem'
+    },
+    '& .MuiTabs-indicator': {
+      backgroundColor: theme.palette.primary.main,
+      height: 3
+    }
   },
   paper: {
     ...theme.scrollbarStyles,

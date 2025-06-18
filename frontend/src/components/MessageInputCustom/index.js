@@ -20,9 +20,10 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import { FormControlLabel, Switch } from "@material-ui/core";
+import { FormControlLabel, Switch, Tooltip } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
+import MessageIcon from "@material-ui/icons/Message";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -36,6 +37,7 @@ import toastError from "../../errors/toastError";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
 import FileUploadModal from '../FileUploadModal';
+import QuickMessageUploadModal from '../QuickMessageUploadModal';
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
@@ -278,27 +280,35 @@ const ActionButtons = (props) => {
   const classes = useStyles();
   if (inputMessage) {
     return (
-      <IconButton
-        aria-label="sendMessage"
-        component="span"
-        onClick={handleSendMessage}
-        disabled={loading}
-      >
-        <SendIcon className={classes.sendMessageIcons} />
-      </IconButton>
+      <Tooltip title={i18n.t("chat.tooltips.sendMessage")}>
+        <span>
+          <IconButton
+            aria-label="sendMessage"
+            component="span"
+            onClick={handleSendMessage}
+            disabled={loading}
+          >
+            <SendIcon className={classes.sendMessageIcons} />
+          </IconButton>
+        </span>
+      </Tooltip>
     );
   } else if (recording) {
     return (
       <div className={classes.recorderWrapper}>
-        <IconButton
-          aria-label="cancelRecording"
-          component="span"
-          fontSize="large"
-          disabled={loading}
-          onClick={handleCancelAudio}
-        >
-          <HighlightOffIcon className={classes.cancelAudioIcon} />
-        </IconButton>
+        <Tooltip title={i18n.t("chat.tooltips.cancelRecording")}>
+          <span>
+            <IconButton
+              aria-label="cancelRecording"
+              component="span"
+              fontSize="large"
+              disabled={loading}
+              onClick={handleCancelAudio}
+            >
+              <HighlightOffIcon className={classes.cancelAudioIcon} />
+            </IconButton>
+          </span>
+        </Tooltip>
         {loading ? (
           <div>
             <CircularProgress className={classes.audioLoading} />
@@ -307,26 +317,34 @@ const ActionButtons = (props) => {
           <RecordingTimer />
         )}
 
-        <IconButton
-          aria-label="sendRecordedAudio"
-          component="span"
-          onClick={handleUploadAudio}
-          disabled={loading}
-        >
-          <CheckCircleOutlineIcon className={classes.sendAudioIcon} />
-        </IconButton>
+        <Tooltip title={i18n.t("chat.tooltips.sendRecordedAudio")}>
+          <span>
+            <IconButton
+              aria-label="sendRecordedAudio"
+              component="span"
+              onClick={handleUploadAudio}
+              disabled={loading}
+            >
+              <CheckCircleOutlineIcon className={classes.sendAudioIcon} />
+            </IconButton>
+          </span>
+        </Tooltip>
       </div>
     );
   } else {
     return (
-      <IconButton
-        aria-label="showRecorder"
-        component="span"
-        disabled={loading || ticketStatus !== "open"}
-        onClick={handleStartRecording}
-      >
-        <MicIcon className={classes.sendMessageIcons} />
-      </IconButton>
+      <Tooltip title={i18n.t("chat.tooltips.recordAudio")}>
+        <span>
+          <IconButton
+            aria-label="showRecorder"
+            component="span"
+            disabled={loading || ticketStatus !== "open"}
+            onClick={handleStartRecording}
+          >
+            <MicIcon className={classes.sendMessageIcons} />
+          </IconButton>
+        </span>
+      </Tooltip>
     );
   }
 };
@@ -370,6 +388,7 @@ const CustomInput = (props) => {
           value: m.message,
           label: `/${m.shortcode} - ${truncatedMessage}`,
           mediaPath: m.mediaPath,
+          mediaName: m.mediaName
         };
       });
       setQuickMessages(options);
@@ -386,12 +405,14 @@ const CustomInput = (props) => {
       const firstWord = inputMessage.charAt(0);
       setPopupOpen(firstWord.indexOf("/") > -1);
 
+      const searchTerm = inputMessage.toLowerCase().replace("/", "");
       const filteredOptions = quickMessages.filter(
-        (m) => m.label.indexOf(inputMessage) > -1
+        (m) => m.label.toLowerCase().indexOf(searchTerm) > -1
       );
       setOptions(filteredOptions);
     } else {
       setPopupOpen(false);
+      setOptions([]);
     }
   }, [inputMessage]);
 
@@ -503,6 +524,7 @@ const CustomInput = (props) => {
         value={inputMessage}
         options={options}
         closeIcon={null}
+        disabled={disableOption()}
         getOptionLabel={(option) => {
           if (isObject(option)) {
             return option.label;
@@ -511,6 +533,7 @@ const CustomInput = (props) => {
           }
         }}
         onChange={(event, opt) => {
+          if (disableOption()) return;
           if (isObject(opt) && has(opt, "value") && isNil(opt.mediaPath)) {
             setInputMessage(opt.value);
             setTimeout(() => {
@@ -524,6 +547,7 @@ const CustomInput = (props) => {
           }
         }}
         onInputChange={(event, opt, reason) => {
+          if (disableOption()) return;
           if (reason === "input") {
             setInputMessage(event.target.value);
           }
@@ -569,6 +593,8 @@ const MessageInputCustom = (props) => {
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
   const [showFileUploadModal, setShowFileUploadModal] = useState(false);
+  const [showQuickMessageModal, setShowQuickMessageModal] = useState(false);
+  const [quickMessageData, setQuickMessageData] = useState(null);
 
   useEffect(() => {
     inputRef.current.focus();
@@ -702,21 +728,66 @@ const MessageInputCustom = (props) => {
   const handleQuickAnswersClick = async (value) => {
     if (value.mediaPath) {
       try {
-        const { data } = await axios.get(value.mediaPath, {
+        const response = await axios.get(value.mediaPath, {
           responseType: "blob",
         });
 
-        handleUploadQuickMessageMedia(data, value.value);
-        setInputMessage("");
-        return;
-        //  handleChangeMedias(response)
+        // Extrair o tipo MIME do cabeçalho Content-Type
+        const contentType = response.headers['content-type'];
+
+        // Usar o nome original do arquivo da mensagem rápida
+        const fileName = value.mediaName || value.mediaPath.split('/').pop() || 'arquivo';
+
+        // Criar um arquivo a partir do blob com o tipo MIME correto
+        const file = new File([response.data], fileName, {
+          type: contentType
+        });
+
+        // Abrir a modal específica para mensagens rápidas
+        setQuickMessageData({
+          message: value.value || "",
+          file: file
+        });
+        setShowQuickMessageModal(true);
       } catch (err) {
+        console.error('Erro ao processar anexo:', err);
         toastError(err);
       }
+    } else {
+      setInputMessage(value.value);
     }
+  };
 
+  const handleQuickMessageSend = async ({ message, file }) => {
+    setLoading(true);
+    try {
+      if (file) {
+        const formData = new FormData();
+        formData.append("medias", file);
+        formData.append("body", message ? message.trim() : file.name);
+        formData.append("fromMe", true);
+        await api.post(`/messages/${ticketId}`, formData);
+      } else if (message) {
+        const messageData = {
+          read: 1,
+          fromMe: true,
+          mediaUrl: "",
+          body: signMessage
+            ? `*${user?.name}:*\n${message.trim()}`
+            : message.trim(),
+          quotedMsg: replyingMessage,
+        };
+        await api.post(`/messages/${ticketId}`, messageData);
+      }
+    } catch (err) {
+      console.error('Erro ao enviar mensagem rápida:', err);
+      toastError(err);
+    }
+    setLoading(false);
+    setQuickMessageData(null);
+    setShowQuickMessageModal(false);
+    // Limpar o input
     setInputMessage("");
-    setInputMessage(value.value);
   };
 
   const handleUploadMedia = async (e) => {
@@ -850,21 +921,48 @@ const MessageInputCustom = (props) => {
     <Paper square elevation={0} className={classes.mainWrapper}>
       {replyingMessage && renderReplyingMessage(replyingMessage)}
       <div className={classes.newMessageBox}>
-        <EmojiOptions
-          disabled={disableOption()}
-          handleAddEmoji={handleAddEmoji}
-          showEmoji={showEmoji}
-          setShowEmoji={setShowEmoji}
-        />
+        <Tooltip title={i18n.t("chat.tooltips.emojis")}>
+          <span>
+            <EmojiOptions
+              disabled={disableOption()}
+              handleAddEmoji={handleAddEmoji}
+              showEmoji={showEmoji}
+              setShowEmoji={setShowEmoji}
+            />
+          </span>
+        </Tooltip>
 
-        <IconButton
-          aria-label="upload"
-          component="span"
-          disabled={disableOption()}
-          onClick={() => setShowFileUploadModal(true)}
-        >
-          <AttachFileIcon className={classes.sendMessageIcons} />
-        </IconButton>
+        <Tooltip title={i18n.t("chat.tooltips.attachFile")}>
+          <span>
+            <IconButton
+              aria-label="upload"
+              component="span"
+              disabled={disableOption()}
+              onClick={() => setShowFileUploadModal(true)}
+            >
+              <AttachFileIcon className={classes.sendMessageIcons} />
+            </IconButton>
+          </span>
+        </Tooltip>
+
+        <Tooltip title={i18n.t("quickMessages.tooltip")}>
+          <span>
+            <IconButton
+              aria-label="quickMessage"
+              component="span"
+              disabled={disableOption()}
+              onClick={() => {
+                setQuickMessageData({
+                  message: "",
+                  file: null
+                });
+                setShowQuickMessageModal(true);
+              }}
+            >
+              <MessageIcon className={classes.sendMessageIcons} />
+            </IconButton>
+          </span>
+        </Tooltip>
 
         <SignSwitch
           width={props.width}
@@ -898,6 +996,18 @@ const MessageInputCustom = (props) => {
           handleStartRecording={handleStartRecording}
         />
       </div>
+      <QuickMessageUploadModal
+        open={showQuickMessageModal}
+        onClose={() => {
+          setShowQuickMessageModal(false);
+          setQuickMessageData(null);
+          // Limpar o input quando a modal é fechada
+          setInputMessage("");
+        }}
+        onSend={handleQuickMessageSend}
+        initialMessage={quickMessageData?.message}
+        initialFile={quickMessageData?.file}
+      />
       <FileUploadModal
         open={showFileUploadModal}
         onClose={() => {

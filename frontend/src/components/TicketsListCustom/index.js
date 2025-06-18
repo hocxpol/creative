@@ -74,8 +74,8 @@ const useStyles = makeStyles((theme) => ({
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_TICKETS") {
-    const newTickets = action.payload;
-
+    const newTickets = Array.isArray(action.payload) ? action.payload : [];
+    
     newTickets.forEach((ticket) => {
       const ticketIndex = state.findIndex((t) => t.id === ticket.id);
       if (ticketIndex !== -1) {
@@ -104,15 +104,21 @@ const reducer = (state, action) => {
 
   if (action.type === "UPDATE_TICKET") {
     const ticket = action.payload;
+    
+    if (!ticket || typeof ticket !== 'object') return [...state];
 
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
-      state[ticketIndex] = ticket;
+      const newState = [...state];
+      newState[ticketIndex] = {
+        ...state[ticketIndex],
+        ...ticket,
+        lastMessage: ticket.lastMessage || state[ticketIndex].lastMessage
+      };
+      return newState;
     } else {
-      state.unshift(ticket);
+      return [ticket, ...state];
     }
-
-    return [...state];
   }
 
   if (action.type === "UPDATE_TICKET_UNREAD_MESSAGES") {
@@ -220,31 +226,36 @@ const TicketsListCustom = (props) => {
     });
 
     socket.on(`company-${companyId}-ticket`, (data) => {
+      if (!data || typeof data !== 'object') return;
       
-      if (data.action === "updateUnread") {
-        dispatch({
-          type: "RESET_UNREAD",
-          payload: data.ticketId,
-        });
+      if (
+        data.action === "update" &&
+        data.ticket &&
+        data.ticket.status !== status
+      ) {
+        dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+        return;
       }
 
-      if (data.action === "update" && shouldUpdateTicket(data.ticket) && data.ticket.status === status) {
+      if (data.action === "update" && data.ticket && shouldUpdateTicket(data.ticket)) {
         dispatch({
           type: "UPDATE_TICKET",
           payload: data.ticket,
         });
       }
 
-      if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
+      if (data.action === "update" && data.ticket && notBelongsToUserQueues(data.ticket)) {
         dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
       }
 
-      if (data.action === "delete") {
+      if (data.action === "delete" && typeof data.ticketId === 'number') {
         dispatch({ type: "DELETE_TICKET", payload: data.ticketId });
       }
     });
 
     socket.on(`company-${companyId}-appMessage`, (data) => {
+      if (!data || typeof data !== 'object') return;
+
       const queueIds = queues.map((q) => q.id);
       if (
         profile === "user" &&
@@ -254,7 +265,30 @@ const TicketsListCustom = (props) => {
         return;
       }
 
-      if (data.action === "create" && shouldUpdateTicket(data.ticket) && ( status === undefined || data.ticket.status === status)) {
+      if (data.action === "update" && data.message?.isDeleted && data.ticket) {
+        if (data.ticket.status === status && shouldUpdateTicket(data.ticket)) {
+          dispatch({
+            type: "UPDATE_TICKET",
+            payload: {
+              ...data.ticket,
+              lastMessage: "Essa mensagem foi apagada pelo contato."
+            }
+          });
+        }
+        return;
+      }
+
+      if (data.ticket && data.ticket.status !== status) {
+        dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+        return;
+      }
+
+      if (data.ticket && notBelongsToUserQueues(data.ticket)) {
+        dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+        return;
+      }
+
+      if (data.action === "create" && data.ticket && shouldUpdateTicket(data.ticket) && (status === undefined || data.ticket.status === status)) {
         dispatch({
           type: "UPDATE_TICKET_UNREAD_MESSAGES",
           payload: data.ticket,
@@ -274,7 +308,7 @@ const TicketsListCustom = (props) => {
     return () => {
       socket.disconnect();
     };
-  }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager]);
+  }, [status, showAll, user, selectedQueueIds, socketManager]);
 
   useEffect(() => {
     if (typeof updateCount === "function") {

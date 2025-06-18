@@ -35,6 +35,9 @@ class QuickMessage extends Model<QuickMessage> {
   @Column
   userId: number;
 
+  @Column
+  visibility: string; // 'all' | 'me'
+
   @BelongsTo(() => Company)
   company: Company;
 
@@ -54,8 +57,7 @@ class QuickMessage extends Model<QuickMessage> {
       const port = process.env.PROXY_PORT ? `:${process.env.PROXY_PORT}` : "";
       const mediaPath = this.getDataValue("mediaPath").replace(/^\//, "");
       
-      return path.join(baseUrl, port, "public", "quickMessage", mediaPath).replace(/\\/g, "/");
-
+      return `${baseUrl}${port}/public/quickMessage/${mediaPath}`;
     }
     return null;
   }

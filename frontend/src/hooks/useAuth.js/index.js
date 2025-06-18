@@ -19,6 +19,12 @@ const useAuth = () => {
     (config) => {
       const token = localStorage.getItem("token");
       const companyId = localStorage.getItem("companyId");
+      if (config.url === "/auth/login") {
+        if (token) {
+          config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
+        }
+        return config;
+      }
       if (token && companyId) {
         config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
         setIsAuth(true);

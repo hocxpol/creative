@@ -20,10 +20,11 @@ import toastError from "../../errors/toastError";
 import { makeStyles } from "@material-ui/core/styles";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import {  WhatsApp } from "@material-ui/icons";
-import { Grid, ListItemText, MenuItem, Select, ListItemIcon } from "@material-ui/core";
+import { Grid, ListItemText, MenuItem, Select, ListItemIcon, Snackbar, FormHelperText } from "@material-ui/core";
 import Typography from "@material-ui/core/Typography";
 import { toast } from "react-toastify";
 import { Visibility, VisibilityOff } from "@material-ui/icons";
+import { Alert } from "@material-ui/lab";
 //import ShowTicketOpen from "../ShowTicketOpenModal";
 
 const useStyles = makeStyles((theme) => ({
@@ -146,7 +147,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
   const handleSaveTicket = async contactId => {
     if (!contactId) return;
     if (selectedQueue === "" && user.profile !== 'admin') {
-      toast.error("Selecione uma fila");
+      toast.error(i18n.t("newTicketModal.errors.selectQueue"));
       return;
     }
     
@@ -164,22 +165,28 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
 
       onClose(ticket);
     } catch (err) {
-      
-      const ticket  = JSON.parse(err.response.data.error);
-
-      if (ticket.userId !== user?.id) {
-        setOpenAlert(true);
-        setUserTicketOpen(ticket.user.name);
-        setQueueTicketOpen(ticket.queue.name);
+      if (err.response?.data?.error === "ERR_OTHER_OPEN_TICKET") {
+        const ticket = err.response.data.ticket;
+        if (ticket?.userId !== user?.id) {
+          setOpenAlert(true);
+          setUserTicketOpen(ticket?.user?.name || "");
+          setQueueTicketOpen(ticket?.queue?.name || "");
+          toast.warning(i18n.t("newTicketModal.errors.ticketAlreadyOpen", {
+            user: ticket?.user?.name || i18n.t("newTicketModal.errors.otherUser"),
+            queue: ticket?.queue?.name || ""
+          }));
+        } else {
+          setOpenAlert(false);
+          setUserTicketOpen("");
+          setQueueTicketOpen("");
+          setLoading(false);
+          onClose(ticket);
+        }
       } else {
-        setOpenAlert(false);
-        setUserTicketOpen("");
-        setQueueTicketOpen("");
-        setLoading(false);
-        onClose(ticket);
+        toast.error(i18n.t("backendErrors.ERR_CREATING_TICKET"));
       }
-    }  
-    setLoading(false);
+      setLoading(false);
+    }
   };
 
   const handleSelectOption = (e, newValue) => {
@@ -295,7 +302,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
           <Grid style={{ width: 300 }} container spacing={2}>
             {/* CONTATO */}
             {renderContactAutocomplete()}
-            {/* FILA */}
+            {/* DEPARTAMENTO */}
             <Grid xs={12} item>
               <Select
                 required
@@ -319,7 +326,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                 }}
                 renderValue={() => {
                   if (selectedQueue === "") {
-                    return "Selecione uma fila"
+                    return "Selecione um departamento"
                   }
                   const queue = user.queues.find(q => q.id === selectedQueue)
                   return queue.name
@@ -340,6 +347,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                   ))
                 }
               </Select>
+              <FormHelperText>Selecione um departamento</FormHelperText>
             </Grid>
             {/* CONEXAO */}
             <Grid xs={12} item>
@@ -410,13 +418,20 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
             {i18n.t("newTicketModal.buttons.ok")}
           </ButtonWithSpinner>
         </DialogActions>
-        {/* <ShowTicketOpen
-          isOpen={openAlert}
-          handleClose={handleCloseAlert}
-          user={userTicketOpen}
-          queue={queueTicketOpen}
-			  /> */}
-      </Dialog >
+        <Snackbar
+          open={openAlert}
+          autoHideDuration={6000}
+          onClose={handleCloseAlert}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseAlert} severity="warning">
+            {i18n.t("newTicketModal.errors.ticketAlreadyOpen", {
+              user: userTicketOpen || i18n.t("newTicketModal.errors.otherUser"),
+              queue: queueTicketOpen || ""
+            })}
+          </Alert>
+        </Snackbar>
+      </Dialog>
     </>
   );
 };

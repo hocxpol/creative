@@ -14,12 +14,17 @@ import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormHelperText from "@material-ui/core/FormHelperText";
 
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import { FormControl, Grid, IconButton } from "@material-ui/core";
+import { Grid, IconButton } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import moment from "moment"
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -29,6 +34,7 @@ import AttachFile from "@material-ui/icons/AttachFile";
 import { head } from "lodash";
 import ConfirmationModal from "../ConfirmationModal";
 import MessageVariablesPicker from "../MessageVariablesPicker";
+import FileUploadModal from "../FileUploadModal";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -37,6 +43,7 @@ const useStyles = makeStyles(theme => ({
 	},
 	multFieldLine: {
 		display: "flex",
+		marginBottom: theme.spacing(2),
 		"& > *:not(:last-child)": {
 			marginRight: theme.spacing(1),
 		},
@@ -65,19 +72,29 @@ const ScheduleSchema = Yup.object().shape({
 		.min(5, "Mensagem muito curta")
 		.required("Obrigatório"),
 	contactId: Yup.number().required("Obrigatório"),
-	sendAt: Yup.string().required("Obrigatório")
+	sendAt: Yup.string().required("Obrigatório"),
+	whatsappId: Yup.number().required("Obrigatório")
 });
 
 const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, reload }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const { user } = useContext(AuthContext);
+	const messageInputRef = useRef();
 
 	const initialState = {
 		body: "",
 		contactId: "",
 		sendAt: moment().add(1, 'hour').format('YYYY-MM-DDTHH:mm'),
-		sentAt: ""
+		sentAt: "",
+		userId: user.id,
+		companyId: user.companyId,
+		status: "PENDING",
+		mediaPath: "",
+		mediaName: "",
+		mediaType: "",
+		mediaList: [],
+		whatsappId: ""
 	};
 
 	const initialContact = {
@@ -88,10 +105,12 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 	const [schedule, setSchedule] = useState(initialState);
 	const [currentContact, setCurrentContact] = useState(initialContact);
 	const [contacts, setContacts] = useState([initialContact]);
-	const [attachment, setAttachment] = useState(null);
-	const attachmentFile = useRef(null);
+	const [whatsapps, setWhatsapps] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [showFileUploadModal, setShowFileUploadModal] = useState(false);
+	const [filesToUpload, setFilesToUpload] = useState([]);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
-	const messageInputRef = useRef();
+	const [selectedMediaIndex, setSelectedMediaIndex] = useState(null);
 
 	useEffect(() => {
 		if (contactId && contacts.length) {
@@ -112,6 +131,10 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 					if (isArray(customList)) {
 						setContacts([{ id: "", name: "" }, ...customList]);
 					}
+
+					const { data: whatsappList } = await api.get('/whatsapp/', { params: { companyId: companyId } });
+					setWhatsapps(whatsappList);
+
 					if (contactId) {
 						setSchedule(prevState => {
 							return { ...prevState, contactId }
@@ -122,7 +145,12 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 
 					const { data } = await api.get(`/schedules/${scheduleId}`);
 					setSchedule(prevState => {
-						return { ...prevState, ...data, sendAt: moment(data.sendAt).format('YYYY-MM-DDTHH:mm') };
+						return { 
+							...prevState, 
+							...data, 
+							sendAt: moment(data.sendAt).format('YYYY-MM-DDTHH:mm'),
+							mediaList: data.mediaList || []
+						};
 					});
 					setCurrentContact(data.contact);
 				})()
@@ -133,39 +161,55 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 	}, [scheduleId, contactId, open, user]);
 
 	const handleClose = () => {
-		onClose();
-		setAttachment(null);
-		setSchedule(initialState);
-	};
-
-	const handleAttachmentFile = (e) => {
-		const file = head(e.target.files);
-		if (file) {
-			setAttachment(file);
+		if (showFileUploadModal) {
+			setShowFileUploadModal(false);
+			return;
 		}
+		
+		setSchedule(initialState);
+		setCurrentContact(initialContact);
+		setShowFileUploadModal(false);
+		setFilesToUpload([]);
+		onClose();
 	};
 
-	const handleSaveSchedule = async values => {
-		const scheduleData = { ...values, userId: user.id };
+	const handleSaveSchedule = async (values) => {
+		setLoading(true);
 		try {
-			if (scheduleId) {
-				await api.put(`/schedules/${scheduleId}`, scheduleData);
-				if (attachment != null) {
-					const formData = new FormData();
-					formData.append("file", attachment);
-					await api.post(
-						`/schedules/${scheduleId}/media-upload`,
-						formData
-					);
+			let scheduleData = { ...values };
+			
+			// Se houver arquivos para upload
+			if (schedule.mediaList && schedule.mediaList.length > 0) {
+				const formData = new FormData();
+				
+				schedule.mediaList.forEach((fileData, index) => {
+					formData.append("files", fileData.file);
+					formData.append("mediaType", fileData.file.type);
+					formData.append("name", fileData.name);
+					formData.append("description", fileData.description || "");
+					formData.append("index", index.toString());
+				});
+
+				// Primeiro salva o agendamento
+				let response;
+				if (scheduleId) {
+					response = await api.put(`/schedules/${scheduleId}`, scheduleData);
+				} else {
+					response = await api.post("/schedules", scheduleData);
 				}
+
+				// Depois faz o upload dos arquivos
+				const { data } = await api.post(`/schedules/${response.data.id}/media-upload`, formData);
+				scheduleData.mediaList = data.mediaList || [];
 			} else {
-				const { data } = await api.post("/schedules", scheduleData);
-				if (attachment != null) {
-					const formData = new FormData();
-					formData.append("file", attachment);
-					await api.post(`/schedules/${data.id}/media-upload`, formData);
+				// Se não houver arquivos, apenas salva o agendamento
+				if (scheduleId) {
+					await api.put(`/schedules/${scheduleId}`, scheduleData);
+				} else {
+					await api.post("/schedules", scheduleData);
 				}
 			}
+			
 			toast.success(i18n.t("scheduleModal.success"));
 			if (typeof reload == 'function') {
 				reload();
@@ -179,10 +223,57 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 		} catch (err) {
 			toastError(err);
 		}
-		setCurrentContact(initialContact);
-		setSchedule(initialState);
+		setLoading(false);
 		handleClose();
 	};
+
+	const handleUploadFiles = async (files) => {
+		if (!files || files.length === 0) return;
+
+		try {
+			setLoading(true);
+			const newMediaList = files.map(fileData => ({
+				file: fileData.file,
+				name: fileData.description || fileData.file.name,
+				type: fileData.file.type,
+				description: fileData.description || ""
+			}));
+
+			setSchedule(prev => ({
+				...prev,
+				mediaList: [...(prev.mediaList || []), ...newMediaList]
+			}));
+
+			toast.success(i18n.t("fileUploadModal.success"));
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setLoading(false);
+			setShowFileUploadModal(false);
+			setFilesToUpload([]);
+		}
+	};
+
+	const handleRemoveMedia = async (index) => {
+		try {
+			if (scheduleId) {
+				await api.delete(`/schedules/${scheduleId}/media/${index}`);
+				setSchedule(prev => ({
+					...prev,
+					mediaList: prev.mediaList.filter((_, i) => i !== index)
+				}));
+			} else {
+				setSchedule(prev => ({
+					...prev,
+					mediaList: prev.mediaList.filter((_, i) => i !== index)
+				}));
+			}
+			toast.success(i18n.t("scheduleModal.mediaRemoved"));
+		} catch (err) {
+			toastError(err);
+		}
+	};
+
 	const handleClickMsgVar = async (msgVar, setValueFunc) => {
 		const el = messageInputRef.current;
 		const firstHalfText = el.value.substring(0, el.selectionStart);
@@ -195,65 +286,25 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 		messageInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
 	};
 
-	const deleteMedia = async () => {
-		if (attachment) {
-			setAttachment(null);
-			attachmentFile.current.value = null;
-		}
-
-		if (schedule.mediaPath) {
-			await api.delete(`/schedules/${schedule.id}/media-upload`);
-			setSchedule((prev) => ({
-				...prev,
-				mediaPath: null,
-			}));
-			toast.success(i18n.t("scheduleModal.toasts.deleted"));
-			if (typeof reload == "function") {
-				reload();
-			}
-		}
-	};
-
 	return (
 		<div className={classes.root}>
-			<ConfirmationModal
-				title={i18n.t("scheduleModal.confirmationModal.deleteTitle")}
-				open={confirmationOpen}
-				onClose={() => setConfirmationOpen(false)}
-				onConfirm={deleteMedia}
-			>
-				{i18n.t("scheduleModal.confirmationModal.deleteMessage")}
-			</ConfirmationModal>
 			<Dialog
 				open={open}
 				onClose={handleClose}
-				maxWidth="xs"
+				maxWidth="sm"
 				fullWidth
 				scroll="paper"
 			>
 				<DialogTitle id="form-dialog-title">
-					{schedule.status === 'ERRO' ? 'Erro de Envio' : `Mensagem ${capitalize(schedule.status)}`}
+					{scheduleId ? i18n.t("scheduleModal.title.edit") : i18n.t("scheduleModal.title.add")}
 				</DialogTitle>
-				<div style={{ display: "none" }}>
-					<input
-						type="file"
-						accept=".png,.jpg,.jpeg"
-						ref={attachmentFile}
-						onChange={(e) => handleAttachmentFile(e)}
-					/>
-				</div>
 				<Formik
 					initialValues={schedule}
 					enableReinitialize={true}
 					validationSchema={ScheduleSchema}
-					onSubmit={(values, actions) => {
-						setTimeout(() => {
-							handleSaveSchedule(values);
-							actions.setSubmitting(false);
-						}, 400);
-					}}
+					onSubmit={(values) => handleSaveSchedule(values)}
 				>
-					{({ touched, errors, isSubmitting, values, setFieldValue }) => (
+					{({ values, touched, errors, setFieldValue, isSubmitting }) => (
 						<Form>
 							<DialogContent dividers>
 								<div className={classes.multFieldLine}>
@@ -267,31 +318,80 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 											options={contacts}
 											onChange={(e, contact) => {
 												const contactId = contact ? contact.id : '';
-												setSchedule({ ...schedule, contactId });
+												setFieldValue("contactId", contactId);
 												setCurrentContact(contact ? contact : initialContact);
 											}}
 											getOptionLabel={(option) => option.name}
 											getOptionSelected={(option, value) => {
 												return value.id === option.id
 											}}
-											renderInput={(params) => <TextField {...params} variant="outlined" placeholder="Contato" />}
+											renderInput={(params) => (
+												<TextField
+													{...params}
+													label={i18n.t("scheduleModal.form.contact")}
+													variant="outlined"
+													error={touched.contactId && Boolean(errors.contactId)}
+													helperText={touched.contactId && errors.contactId}
+												/>
+											)}
 										/>
 									</FormControl>
 								</div>
-								<br />
+								<div className={classes.multFieldLine}>
+									<FormControl
+										variant="outlined"
+										fullWidth
+										error={touched.whatsappId && Boolean(errors.whatsappId)}
+									>
+										<InputLabel>{i18n.t("scheduleModal.form.whatsapp")}</InputLabel>
+										<Field
+											as={Select}
+											value={values.whatsappId}
+											onChange={(e) => setFieldValue("whatsappId", e.target.value)}
+											label={i18n.t("scheduleModal.form.whatsapp")}
+										>
+											<MenuItem value="">
+												<em>Selecione um WhatsApp</em>
+											</MenuItem>
+											{whatsapps.map((whatsapp) => (
+												<MenuItem key={whatsapp.id} value={whatsapp.id}>
+													{whatsapp.name}
+												</MenuItem>
+											))}
+										</Field>
+										{touched.whatsappId && errors.whatsappId && (
+											<FormHelperText error>{errors.whatsappId}</FormHelperText>
+										)}
+									</FormControl>
+								</div>
 								<div className={classes.multFieldLine}>
 									<Field
 										as={TextField}
-										rows={9}
-										multiline={true}
 										label={i18n.t("scheduleModal.form.body")}
+										type="text"
+										multiline
+										rows={5}
 										name="body"
 										inputRef={messageInputRef}
 										error={touched.body && Boolean(errors.body)}
 										helperText={touched.body && errors.body}
 										variant="outlined"
-										margin="dense"
 										fullWidth
+									/>
+								</div>
+								<div className={classes.multFieldLine}>
+									<Field
+										as={TextField}
+										label={i18n.t("scheduleModal.form.sendAt")}
+										type="datetime-local"
+										name="sendAt"
+										error={touched.sendAt && Boolean(errors.sendAt)}
+										helperText={touched.sendAt && errors.sendAt}
+										variant="outlined"
+										fullWidth
+										InputLabelProps={{
+											shrink: true,
+										}}
 									/>
 								</div>
 								<Grid item>
@@ -300,47 +400,42 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 										onClick={value => handleClickMsgVar(value, setFieldValue)}
 									/>
 								</Grid>
-								<br />
-								<div className={classes.multFieldLine}>
-									<Field
-										as={TextField}
-										label={i18n.t("scheduleModal.form.sendAt")}
-										type="datetime-local"
-										name="sendAt"
-										InputLabelProps={{
-											shrink: true,
-										}}
-										error={touched.sendAt && Boolean(errors.sendAt)}
-										helperText={touched.sendAt && errors.sendAt}
-										variant="outlined"
-										fullWidth
-									/>
-								</div>
-								{(schedule.mediaPath || attachment) && (
+								{schedule.mediaList && schedule.mediaList.length > 0 && (
 									<Grid xs={12} item>
-										<Button startIcon={<AttachFile />}>
-											{attachment ? attachment.name : schedule.mediaName}
-										</Button>
-										<IconButton
-											onClick={() => setConfirmationOpen(true)}
-											color="secondary"
-										>
-											<DeleteOutline color="secondary" />
-										</IconButton>
+										{schedule.mediaList.map((media, index) => (
+											<div key={index} style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
+												<Button
+													startIcon={<AttachFile />}
+													onClick={() => {
+														if (media.path) {
+															const url = `${process.env.REACT_APP_BACKEND_URL}/public/${media.path}`;
+															window.open(url, '_blank');
+														}
+													}}
+												>
+													{media.name}
+												</Button>
+												<IconButton
+													onClick={() => handleRemoveMedia(index)}
+													color="secondary"
+													size="small"
+												>
+													<DeleteOutline />
+												</IconButton>
+											</div>
+										))}
 									</Grid>
 								)}
 							</DialogContent>
 							<DialogActions>
-								{!attachment && !schedule.mediaPath && (
-									<Button
-										color="primary"
-										onClick={() => attachmentFile.current.click()}
-										disabled={isSubmitting}
-										variant="outlined"
-									>
-										{i18n.t("quickMessages.buttons.attach")}
-									</Button>
-								)}
+								<Button
+									color="primary"
+									onClick={() => setShowFileUploadModal(true)}
+									disabled={loading || isSubmitting}
+									variant="outlined"
+								>
+									{i18n.t("quickMessages.buttons.attach")}
+								</Button>
 								<Button
 									onClick={handleClose}
 									color="secondary"
@@ -349,29 +444,33 @@ const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, rel
 								>
 									{i18n.t("scheduleModal.buttons.cancel")}
 								</Button>
-								{(schedule.sentAt === null || schedule.sentAt === "") && (
-									<Button
-										type="submit"
-										color="primary"
-										disabled={isSubmitting}
-										variant="contained"
-										className={classes.btnWrapper}
-									>
-										{scheduleId
-											? `${i18n.t("scheduleModal.buttons.okEdit")}`
-											: `${i18n.t("scheduleModal.buttons.okAdd")}`}
-										{isSubmitting && (
-											<CircularProgress
-												size={24}
-												className={classes.buttonProgress}
-											/>
-										)}
-									</Button>
-								)}
+								<Button
+									type="submit"
+									color="primary"
+									disabled={isSubmitting}
+									variant="contained"
+									className={classes.btnWrapper}
+								>
+									{scheduleId
+										? i18n.t("scheduleModal.buttons.okEdit")
+										: i18n.t("scheduleModal.buttons.okAdd")}
+									{isSubmitting && (
+										<CircularProgress
+											size={24}
+											className={classes.buttonProgress}
+										/>
+									)}
+								</Button>
 							</DialogActions>
 						</Form>
 					)}
 				</Formik>
+				<FileUploadModal
+					open={showFileUploadModal}
+					onClose={() => setShowFileUploadModal(false)}
+					onUpload={handleUploadFiles}
+					initialFiles={filesToUpload}
+				/>
 			</Dialog>
 		</div>
 	);

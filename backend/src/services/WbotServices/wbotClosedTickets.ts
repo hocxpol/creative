@@ -76,24 +76,21 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
         expiresTicket !== "0" && Number(expiresTicket) > 0) {
 
         //mensagem de encerramento por inatividade
-        const bodyExpiresMessageInactive = formatBody(`\u200e ${expiresInactiveMessage}`, showTicket.contact);
+        const bodyExpiresMessageInactive = formatBody(`\u200e${expiresInactiveMessage}`, showTicket.contact);
 
         const dataLimite = new Date()
         dataLimite.setMinutes(dataLimite.getMinutes() - Number(expiresTicket));
 
         if (showTicket.status === "open" && !showTicket.isGroup) {
-
           const dataUltimaInteracaoChamado = new Date(showTicket.updatedAt)
 
           if (dataUltimaInteracaoChamado < dataLimite && showTicket.fromMe) {
-
             closeTicket(showTicket, showTicket.status, bodyExpiresMessageInactive);
-
             if (expiresInactiveMessage !== "" && expiresInactiveMessage !== undefined) {
               const sentMessage = await SendWhatsAppMessage({ body: bodyExpiresMessageInactive, ticket: showTicket });
-
               await verifyMessage(sentMessage, showTicket, showTicket.contact);
             }
+
 
             await ticketTraking.update({
               finishedAt: moment().toDate(),
@@ -102,11 +99,17 @@ export const ClosedAllOpenTickets = async (companyId: number): Promise<void> => 
               userId: ticket.userId,
             })
 
-            io.to("open").emit(`company-${companyId}-ticket`, {
+            io.to(`company-${companyId}-open`)
+              .to(`queue-${ticket.queueId}-open`)
+              .to(`company-${companyId}-${showTicket.status}`)
+              .to(`company-${companyId}-notification`)
+              .to(`queue-${ticket.queueId}-${showTicket.status}`)
+              .to(`queue-${ticket.queueId}-notification`)
+              .to(showTicket.id.toString())
+              .emit(`company-${companyId}-ticket`, {
               action: "delete",
               ticketId: showTicket.id
             });
-
           }
         }
       }

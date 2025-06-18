@@ -16,6 +16,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
+import socketManager from "../../services/socketManager";
 
 const useStyles = makeStyles((theme) => ({
 	ticketsListWrapper: {
@@ -112,7 +113,15 @@ const reducer = (state, action) => {
 
 		const ticketIndex = state.findIndex((t) => t.id === ticket.id);
 		if (ticketIndex !== -1) {
-			state[ticketIndex] = ticket;
+			state[ticketIndex] = {
+				...state[ticketIndex],
+				...ticket,
+				lastMessage: ticket.lastMessage || state[ticketIndex].lastMessage
+			};
+			if (ticket.unreadMessages > 0) {
+				const [movedTicket] = state.splice(ticketIndex, 1);
+				state.unshift(movedTicket);
+			}
 		} else {
 			state.unshift(ticket);
 		}
@@ -125,7 +134,11 @@ const reducer = (state, action) => {
 
 		const ticketIndex = state.findIndex((t) => t.id === ticket.id);
 		if (ticketIndex !== -1) {
-			state[ticketIndex] = ticket;
+			state[ticketIndex] = {
+				...state[ticketIndex],
+				...ticket,
+				lastMessage: ticket.lastMessage
+			};
 			state.unshift(state.splice(ticketIndex, 1)[0]);
 		} else {
 			state.unshift(ticket);
@@ -176,11 +189,10 @@ const TicketsList = (props) => {
 	const { profile, queues } = user;
 	const [settings, setSettings] = useState([]);
 
-
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, searchParam, dispatch, showAll, selectedQueueIds, tags]);
+	}, [status, searchParam, showAll, selectedQueueIds, tags, dispatch]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -190,8 +202,6 @@ const TicketsList = (props) => {
 		tags: JSON.stringify(tags),
 		queueIds: JSON.stringify(selectedQueueIds),
 	});
-
-
 
 	useEffect(() => {
 		const fetchSession = async () => {
@@ -204,8 +214,6 @@ const TicketsList = (props) => {
 		};
 		fetchSession();
 	}, []);
-
-
 
 	const handleChangeBooleanSetting = async e => {
 		const selectedValue = e.target.checked ? "enabled" : "disabled";
@@ -222,38 +230,27 @@ const TicketsList = (props) => {
 		}
 	};
 
-
-
 	useEffect(() => {
-
 		const queueIds = queues.map((q) => q.id);
-		const filteredTickets = tickets.filter((t) => queueIds.indexOf(t.queueId) > -1);
-		const getSettingValue = key => {
-			const { value } = settings.find(s => s.key === key);
-			return value;
-		};
+		const filteredTickets = tickets.filter((t) => {
+			// Include tickets that either:
+			// 1. Have a queueId that matches one of the user's queues
+			// 2. Have no queue but are pending (for contacts with disabled automation)
+			return queueIds.indexOf(t.queueId) > -1 || (t.status === "pending" && !t.queueId);
+		});
 		const allticket = user.allTicket === 'enabled';
 
-
-
-
-		// Função para identificação liberação da settings 
-		if (profile === "admin" || allticket) {
+		// Show all tickets if user is admin or has allTicket permission
+		if (profile === "admin" || allticket || showAll) {
 			dispatch({ type: "LOAD_TICKETS", payload: tickets });
 		} else {
 			dispatch({ type: "LOAD_TICKETS", payload: filteredTickets });
 		}
-
-
-
-
-	}, [tickets, status, searchParam, queues, profile]);
+	}, [tickets, status, searchParam, queues, profile, showAll, user.allTicket]);
 
 	useEffect(() => {
-		const socket = openSocket();
-    if (!socket) {
-      return () => {}; 
-    }
+		const companyId = localStorage.getItem("companyId");
+		const socket = socketManager.getSocket(companyId);
 
 		const shouldUpdateTicket = (ticket) =>
 			(!ticket.userId || ticket.userId === user?.id || showAll) &&
@@ -268,9 +265,16 @@ const TicketsList = (props) => {
 			} else {
 				socket.emit("joinNotification");
 			}
+
+			if (selectedQueueIds.length > 0) {
+				selectedQueueIds.forEach(queueId => {
+					socket.emit("joinTickets", `queue-${queueId}-${status}`);
+					socket.emit("joinNotification", `queue-${queueId}-notification`);
+				});
+			}
 		});
 
-		socket.on("ticket", (data) => {
+		socket.on(`company-${companyId}-ticket`, (data) => {
 			if (data.action === "updateUnread") {
 				dispatch({
 					type: "RESET_UNREAD",
@@ -278,15 +282,18 @@ const TicketsList = (props) => {
 				});
 			}
 
-			if (data.action === "update" && shouldUpdateTicket(data.ticket)) {
-				dispatch({
-					type: "UPDATE_TICKET",
-					payload: data.ticket,
-				});
-			}
-
-			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
-				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+			if (data.action === "update") {
+				if (data.ticket.status !== status || notBelongsToUserQueues(data.ticket)) {
+					dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+					return;
+				}
+				
+				if (shouldUpdateTicket(data.ticket)) {
+					dispatch({
+						type: "UPDATE_TICKET",
+						payload: data.ticket,
+					});
+				}
 			}
 
 			if (data.action === "delete") {
@@ -294,8 +301,22 @@ const TicketsList = (props) => {
 			}
 		});
 
-		socket.on("appMessage", (data) => {
-			if (data.action === "create" && shouldUpdateTicket(data.ticket)) {
+		socket.on(`company-${companyId}-appMessage`, (data) => {
+			if (!data || typeof data !== 'object') return;
+
+			if (data.action === "update" && data.message?.isDeleted && data.ticket) {
+				if (status === undefined || data.ticket.status === status) {
+					if (shouldUpdateTicket(data.ticket)) {
+						dispatch({
+							type: "UPDATE_TICKET",
+							payload: {
+								...data.ticket,
+								lastMessage: "Essa mensagem foi apagada pelo contato."
+							}
+						});
+					}
+				}
+			} else if (data.action === "create" && shouldUpdateTicket(data.ticket)) {
 				dispatch({
 					type: "UPDATE_TICKET_UNREAD_MESSAGES",
 					payload: data.ticket,
@@ -303,19 +324,31 @@ const TicketsList = (props) => {
 			}
 		});
 
-		socket.on("contact", (data) => {
-			if (data.action === "update") {
-				dispatch({
-					type: "UPDATE_TICKET_CONTACT",
-					payload: data.contact,
-				});
+		socket.on(`company-${companyId}-mainchannel`, (data) => {
+			if (data.action === "update" && data.ticket.status === status) {
+				if (shouldUpdateTicket(data.ticket)) {
+					dispatch({
+						type: "UPDATE_TICKET",
+						payload: data.ticket,
+					});
+				}
 			}
 		});
 
 		return () => {
+			socket.emit("leaveTickets", status);
+			socket.emit("leaveNotification");
+
+			if (selectedQueueIds.length > 0) {
+				selectedQueueIds.forEach(queueId => {
+					socket.emit("leaveTickets", `queue-${queueId}-${status}`);
+					socket.emit("leaveNotification", `queue-${queueId}-notification`);
+				});
+			}
+
 			socket.disconnect();
 		};
-	}, [status, showAll, user, selectedQueueIds]);
+	}, [status, showAll, user, selectedQueueIds, tags, profile, queues, socketManager]);
 
 	useEffect(() => {
 		if (typeof updateCount === "function") {

@@ -5,7 +5,7 @@ const messages = {
 			no: "No"
 		},
 		errors: {
-			generic: "An error occurred!"
+			generic: "Sorry, an unexpected error occurred. Please try again."
 		},
 		translations: {
 			signup: {
@@ -120,7 +120,7 @@ const messages = {
 					expiresTicket: "Close open chats after X minutes",
 					expiresInactiveMessage: "Inactivity closure message",
 					greetingMessage: "Greeting message",
-					complationMessage: "Completion message",
+					completionMessage: "Completion message",
 					ratingMessage: "Rating message",
 					token: "Token",
 					timeUseBotQueues: "Interval in minutes between bot messages",
@@ -195,18 +195,18 @@ const messages = {
 			},
 			queueModal: {
 				title: {
-					add: "Add queue",
-					edit: "Edit queue",
+					add: "Add department",
+					edit: "Edit department",
 				},
 				form: {
-					name: "Queue Name",
+					name: "Department Name",
 					color: "Color",
 					greetingMessage: "Welcome Message",
 					outOfHoursMessage: "Message for Outside Business Hours",
-					orderQueue: "Queue Order",
+					orderQueue: "Department Order",
 					integrationId: "Select Integration",
-					isInvisible: "Hide Queue",
-					keyword: "Queue Keyword",
+					isInvisible: "Hide Department",
+					keyword: "Department Keyword",
 					automation: "Automation",
 					automationStatus: {
 						enabled: "Enabled",
@@ -230,18 +230,31 @@ const messages = {
 					okEdit: "Save",
 					cancel: "Cancel",
 				},
-				success: "Queue saved successfully.",
+				success: "Department saved successfully.",
 			},
 			userModal: {
 				title: {
-					add: "Add user",
-					edit: "Edit user",
+					add: "Add User",
+					edit: "Edit User",
+				},
+				tabs: {
+					data: "Data",
+					connection: "Connection",
+					departments: "Departments"
 				},
 				form: {
 					name: "Name",
-					email: "Email",
 					password: "Password",
+					email: "Email",
 					profile: "Profile",
+					whatsapp: "Default Connection",
+					queues: "Departments",
+					connection: "Connection",
+					allTicket: "Tickets View",
+					profileOptions: {
+						admin: "Administrator",
+						user: "User",
+					},
 					nameTooShort: "Name is too short",
 					nameTooLong: "Name is too long",
 					nameRequired: "Name is required",
@@ -259,6 +272,14 @@ const messages = {
 			},
 			chat: {
 				noTicketMessage: "Select a ticket to start chatting.",
+				tooltips: {
+					sendMessage: "Send message",
+					cancelRecording: "Cancel recording",
+					sendRecordedAudio: "Send recorded audio",
+					recordAudio: "Record audio",
+					emojis: "Emojis",
+					attachFile: "Attach file"
+				}
 			},
 			ticketsManager: {
 				buttons: {
@@ -266,7 +287,7 @@ const messages = {
 				},
 			},
 			ticketsQueueSelect: {
-				placeholder: "Queues",
+				placeholder: "Departments",
 			},
 			tickets: {
 				toasts: {
@@ -297,7 +318,7 @@ const messages = {
 				},
 			},
 			ticketsList: {
-				pendingHeader: "Queue",
+				pendingHeader: "Department",
 				assignedHeader: "Working on",
 				noTicketsTitle: "Nothing here!",
 				noTicketsMessage: "No tickets found with this status or search term.",
@@ -325,7 +346,7 @@ const messages = {
 					tickets: "Tickets",
 					quickMessages: "Quick Messages",
 					contacts: "Contacts",
-					queues: "Queues & Chatbot",
+					queues: "Departments",
 					tags: "Tags",
 					administration: "Administration",
 					users: "Users",
@@ -354,29 +375,32 @@ const messages = {
 				noTickets: "No notifications.",
 			},
 			queues: {
-				title: "Queues",
+				title: "Departments",
 				table: {
 					id: "ID",
 					name: "Name",
 					color: "Color",
 					greeting: "Greeting message",
 					actions: "Actions",
-					orderQueue: "Queue order (bot)",
+					orderQueue: "Order",
 					keyword: "Keyword",
 					visibility: "Visibility",
-					automation: "Automation"
+					automation: "Automation",
+					number: "Number",
+					session: "Session",
+					queues: "Departments",
 				},
 				buttons: {
-					add: "Add queue",
+					add: "Add department",
 				},
 				confirmationModal: {
 					deleteTitle: "Delete",
 					deleteMessage:
-						"Are you sure? It cannot be reverted! Tickets in this queue will still exist, but will not have any queues assigned.",
+						"Are you sure? It cannot be reverted! Tickets in this department will still exist, but will not have any departments assigned.",
 				},
 			},
 			queueSelect: {
-				inputLabel: "Queues",
+				inputLabel: "Departments",
 			},
 			users: {
 				title: "Users",
@@ -395,19 +419,18 @@ const messages = {
 				confirmationModal: {
 					deleteTitle: "Delete",
 					deleteMessage:
-						"All user data will be lost. Users' open tickets will be moved to queue.",
+						"All user data will be lost. Users' open tickets will be moved to department.",
 				},
 			},
 			settings: {
 				success: "Settings saved successfully.",
 				title: "Settings",
 				tabs: {
+					data: "Department",
+					schedules: "Business Hours",
 					options: "Options",
-					schedules: "Schedules",
-					companies: "Companies",
-					plans: "Plans",
-					helps: "Help",
-					integrations: "Integrations"
+					integrations: "Integrations",
+					advanced: "Advanced"
 				},
 				settings: {
 					userCreation: {
@@ -497,12 +520,13 @@ const messages = {
 				ERR_QUEUE_COLOR_ALREADY_EXISTS:
 					"This color is already in use, pick another one.",
 				ERR_WAPP_GREETING_REQUIRED:
-					"Greeting message is required if there is more than one queue.",
-				ERR_QUEUE_REQUIRED_WHEN_AUTOMATION_DISABLED: "Queue is required when automation is disabled",
+					"Greeting message is required if there is more than one department.",
+				ERR_QUEUE_REQUIRED_WHEN_AUTOMATION_DISABLED: "Department is required when automation is disabled",
 				ERR_INVALID_NUMBER_FORMAT: "Invalid number format. Only numbers are allowed.",
 				ERR_INVALID_CPF: "Invalid CPF",
 				ERR_INVALID_CNPJ: "Invalid CNPJ",
-				ERR_CONTACT_DELETED: "Contact deleted successfully"
+				ERR_CONTACT_DELETED: "Contact deleted successfully",
+				ERR_NO_QUEUE_PERMISSION: "You don't have permission to access this department. To get access, please contact the system administrator and request to add this department to your user profile."
 			},
 			schedulesForm: {
 				weekday: "Weekday",
@@ -553,6 +577,89 @@ const messages = {
 					maxFilesExceeded: "Maximum of {{max}} files allowed",
 					invalidFileName: "File name contains invalid characters",
 					uploadFailed: "Failed to upload files. Please try again."
+				}
+			},
+			whatsapp: "Default Connection",
+			allTicket: "Allow viewing tickets from other departments",
+			allTicketEnabled: "Enabled",
+			allTicketDesabled: "Disabled",
+			nameRequired: "Name is required",
+			ticketsView: "Tickets",
+			ticketsViewEnabled: "View all (including without department)",
+			ticketsViewDisabled: "View only mine",
+			table: {
+				shortcode: "Shortcode",
+				message: "Message",
+				actions: "Actions",
+				mediaName: "File name",
+				status: "Status",
+				visibility: "Visibility",
+				attachment: "Attachment"
+			},
+			quickMessages: {
+				title: "Quick Messages",
+				searchPlaceholder: "Search...",
+				noAttachment: "No attachment",
+				yes: "Yes",
+				no: "No",
+				visibilityAll: "All",
+				visibilityMe: "Only me",
+				tooltip: "Quick Messages",
+				confirmationModal: {
+					deleteTitle: "Delete attachment",
+					deleteMessage: "Are you sure you want to delete this attachment?"
+				},
+				buttons: {
+					add: "Add",
+					attach: "Attach",
+					cancel: "Cancel",
+					edit: "Edit",
+					send: "Send"
+				},
+				toasts: {
+					success: "Quick message saved successfully!",
+					deleted: "Quick message deleted successfully!"
+				},
+				dialog: {
+					title: "Quick Message",
+					shortcode: "Code",
+					message: "Message",
+					select: "Select quick message",
+					selectPlaceholder: "Select a quick message",
+					edit: "Edit quick message",
+					add: "Add quick message",
+					attach: "Attach file"
+				},
+				loading: {
+					uploading: "Uploading file...",
+					saving: "Saving quick message...",
+					sending: "Sending quick message...",
+					downloading: "Loading file..."
+				},
+				table: {
+					shortcode: "Code",
+					message: "Message",
+					actions: "Actions",
+					mediaName: "File",
+					status: "Status",
+					visibility: "Visibility",
+					attachment: "Attachment"
+				}
+			},
+			schedules: {
+				company: {
+					outOfHours: {
+						defaultMessage: "Hello! We are currently out of business hours. Our team will return soon to assist you. Below are our business hours:",
+						noScheduleDefined: "Business hours not defined. Please contact the administrator.",
+						invalidTimeFormat: "Invalid time format. Please contact the administrator."
+					}
+				},
+				queue: {
+					outOfHours: {
+						defaultMessage: "This department is currently out of business hours. Our team will return soon to assist you. Below are this department's business hours:",
+						noScheduleDefined: "Business hours not defined for this department. Please contact the administrator.",
+						invalidTimeFormat: "Invalid time format for this department. Please contact the administrator."
+					}
 				}
 			},
 		},

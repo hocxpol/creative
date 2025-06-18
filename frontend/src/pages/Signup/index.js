@@ -72,11 +72,15 @@ const useStyles = makeStyles(theme => ({
 
 const UserSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, "Too Short!")
-		.max(50, "Too Long!")
-		.required("Required"),
-	password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
-	email: Yup.string().email("Invalid email").required("Required"),
+		.min(2, i18n.t("validation.minLength", { min: 2 }))
+		.max(50, i18n.t("validation.maxLength", { max: 50 }))
+		.required(i18n.t("validation.required")),
+	password: Yup.string()
+		.min(5, i18n.t("validation.minLength", { min: 5 }))
+		.max(50, i18n.t("validation.maxLength", { max: 50 })),
+	email: Yup.string()
+		.email(i18n.t("validation.invalidEmail"))
+		.required(i18n.t("validation.required")),
 });
 
 
@@ -244,7 +248,7 @@ const SignUp = () => {
 									>
 										{plans.map((plan, key) => (
 											<MenuItem key={key} value={plan.id}>
-												{plan.name} - Atendentes: {plan.users} - WhatsApp: {plan.connections} - Filas: {plan.queues} - R$ {plan.value}
+												{plan.name} - Atendentes: {plan.users} - WhatsApp: {plan.connections} - Departamentos: {plan.queues} - R$ {plan.value}
 											</MenuItem>
 										))}
 									</Field>

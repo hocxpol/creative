@@ -27,10 +27,14 @@ const QueueSchedule = ({ schedules, onSchedulesChange }) => {
 
   const handleScheduleChange = (index, field, value) => {
     const newSchedules = [...localSchedules];
+    const weekday = weekdays[index];
+    
     newSchedules[index] = {
       ...newSchedules[index],
       [field]: value,
+      weekdayEn: weekday.value
     };
+    
     setLocalSchedules(newSchedules);
     onSchedulesChange(newSchedules);
   };
@@ -44,6 +48,18 @@ const QueueSchedule = ({ schedules, onSchedulesChange }) => {
     { label: i18n.t("queueModal.form.schedules.weekdays.saturday"), value: "saturday" },
     { label: i18n.t("queueModal.form.schedules.weekdays.sunday"), value: "sunday" },
   ];
+
+  useEffect(() => {
+    if (localSchedules.length === 0) {
+      const initialSchedules = weekdays.map(weekday => ({
+        weekdayEn: weekday.value,
+        startTime: "",
+        endTime: ""
+      }));
+      setLocalSchedules(initialSchedules);
+      onSchedulesChange(initialSchedules);
+    }
+  }, []);
 
   return (
     <Grid spacing={2} container>

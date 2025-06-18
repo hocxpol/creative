@@ -3,6 +3,7 @@ import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Schedule from "../../models/Schedule";
 import ShowService from "./ShowService";
+import Whatsapp from "../../models/Whatsapp";
 
 interface ScheduleData {
   id?: number;
@@ -13,6 +14,7 @@ interface ScheduleData {
   companyId?: number;
   ticketId?: number;
   userId?: number;
+  whatsappId?: number;
 }
 
 interface Request {
@@ -33,7 +35,11 @@ const UpdateUserService = async ({
   }
 
   const schema = Yup.object().shape({
-    body: Yup.string().min(5)
+    body: Yup.string().min(5),
+    sendAt: Yup.string(),
+    contactId: Yup.number(),
+    userId: Yup.number(),
+    whatsappId: Yup.number()
   });
 
   const {
@@ -43,12 +49,23 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    whatsappId,
   } = scheduleData;
 
   try {
-    await schema.validate({ body });
+    await schema.validate({ body, sendAt, contactId, userId, whatsappId });
   } catch (err: any) {
     throw new AppError(err.message);
+  }
+
+  // Se houver mudança de WhatsApp, verifica se o novo WhatsApp existe
+  if (whatsappId) {
+    const whatsapp = await Whatsapp.findOne({
+      where: { id: whatsappId, companyId }
+    });
+    if (!whatsapp) {
+      throw new AppError("WhatsApp não encontrado");
+    }
   }
 
   await schedule.update({
@@ -58,6 +75,7 @@ const UpdateUserService = async ({
     contactId,
     ticketId,
     userId,
+    whatsappId,
   });
 
   await schedule.reload();

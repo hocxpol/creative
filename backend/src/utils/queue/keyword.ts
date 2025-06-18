@@ -20,6 +20,9 @@ import { handleOpenAi } from "../openai";
 import * as Sentry from "@sentry/node";
 import QueueOption from "../../models/QueueOption";
 import { Sequelize } from "sequelize";
+import { logger } from "../../utils/logger";
+import { verifyQueue } from "./index";
+import VerifyCurrentSchedule from "../../services/QueueService/VerifyCurrentSchedule";
 
 /**
  * Verifica se a mensagem recebida corresponde a alguma keyword de fila.
@@ -43,7 +46,6 @@ export const verifyKeyword = async (
 ): Promise<boolean> => {
   try {
     const timestamp = new Date().toISOString();
-
     const companyId = ticket.companyId;
     const body = getBodyMessage(msg);
 
@@ -94,22 +96,11 @@ export const verifyKeyword = async (
     // Só verifica o horário se o scheduleType não estiver desabilitado
     if (scheduleType && scheduleType.value !== "disabled") {
       const queue = await Queue.findByPk(matchedQueue.id);
-      const { schedules }: any = queue;
-      const now = moment();
-      const weekday = now.format("dddd").toLowerCase();
-      let schedule;
       
-      // Busca o agendamento para o dia atual
-      if (Array.isArray(schedules) && schedules.length > 0) {
-        schedule = schedules.find((s) => s.weekdayEn === weekday && s.startTime !== "" && s.startTime !== null && s.endTime !== "" && s.endTime !== null);
-      }
-
-      // Verifica se está fora do horário de funcionamento
-      if (queue.outOfHoursMessage !== null && queue.outOfHoursMessage !== "" && !isNil(schedule)) {
-        const startTime = moment(schedule.startTime, "HH:mm");
-        const endTime = moment(schedule.endTime, "HH:mm");
-
-        if (now.isBefore(startTime) || now.isAfter(endTime)) {
+      if (queue.outOfHoursMessage) {
+        const queueSchedule = await VerifyCurrentSchedule(queue.id);
+        
+        if (!queueSchedule.inActivity) {
           const body = formatBody(`\u200e ${queue.outOfHoursMessage}\n\n*[ # ]* - Menu inicial`, ticket.contact);
           const sentMessage = await wbot.sendMessage(
             `${contact.number}@${ticket.isGroup ? "g.us" : "s.whatsapp.net"}`,
@@ -173,6 +164,21 @@ export const verifyKeyword = async (
 
     // Se não houver integração, processa as opções normalmente
     if (chatbot && !msg.key.fromMe) {
+      // Verifica se o usuário quer voltar ao menu principal
+      if (body === "0" || body === "#") {
+        await UpdateTicketService({
+          ticketData: { 
+            queueId: null,
+            chatbot: false,
+            queueOptionId: null
+          },
+          ticketId: ticket.id,
+          companyId: ticket.companyId
+        });
+        await verifyQueue(wbot, msg, ticket, contact);
+        return true;
+      }
+
       // Verifica o tipo de exibição do chatbot (texto ou botão)
       const buttonActive = await Setting.findOne({
         where: {

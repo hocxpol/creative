@@ -44,13 +44,23 @@ const MessagesAPI = () => {
 
   useEffect(() => {
     async function fetchData() {
-      const companyId = localStorage.getItem("companyId");
-      const planConfigs = await getPlanCompany(undefined, companyId);
-      if (!planConfigs.plan.useExternalApi) {
-        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-        setTimeout(() => {
-          history.push(`/`)
-        }, 1000);
+      try {
+        const companyId = localStorage.getItem("companyId");
+        if (!companyId) {
+          toast.error("Company ID is required");
+          history.push('/');
+          return;
+        }
+        const planConfigs = await getPlanCompany(undefined, companyId);
+        if (!planConfigs.plan.useExternalApi) {
+          toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
+          setTimeout(() => {
+            history.push(`/`)
+          }, 1000);
+        }
+      } catch (err) {
+        toastError(err);
+        history.push('/');
       }
     }
     fetchData();
