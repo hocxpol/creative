@@ -51,6 +51,13 @@ const messages = {
 				title: "Connections",
 				toasts: {
 					deleted: "WhatsApp connection deleted sucessfully!",
+					resetSuccess: "WhatsApp reset and reconnecting...",
+					disconnectSuccess: "WhatsApp disconnected successfully!",
+				},
+				errors: {
+					resetError: "Error resetting WhatsApp. Please try again.",
+					disconnectError: "Error disconnecting WhatsApp. Please try again.",
+					connectionError: "Connection error. Check your internet and try again.",
 				},
 				confirmationModal: {
 					deleteTitle: "Delete",
@@ -65,6 +72,7 @@ const messages = {
 					qrcode: "QR CODE",
 					newQr: "New QR CODE",
 					connecting: "Connectiing",
+					reset: "Reset and Reconnect",
 				},
 				toolTips: {
 					disconnected: {

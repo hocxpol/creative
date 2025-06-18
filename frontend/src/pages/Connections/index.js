@@ -144,7 +144,7 @@ const Connections = () => {
 		try {
 			await api.post(`/whatsappsession/${whatsAppId}`);
 		} catch (err) {
-			toastError(err);
+			toast.error(i18n.t("connections.errors.connectionError"));
 		}
 	};
 
@@ -152,7 +152,16 @@ const Connections = () => {
 		try {
 			await api.put(`/whatsappsession/${whatsAppId}`);
 		} catch (err) {
-			toastError(err);
+			toast.error(i18n.t("connections.errors.connectionError"));
+		}
+	};
+
+	const handleForceReset = async whatsAppId => {
+		try {
+			await api.post(`/whatsappsession/${whatsAppId}/reset`);
+			toast.success(i18n.t("connections.toasts.resetSuccess"));
+		} catch (err) {
+			toast.error(i18n.t("connections.errors.resetError"));
 		}
 	};
 
@@ -206,8 +215,9 @@ const Connections = () => {
 		if (confirmModalInfo.action === "disconnect") {
 			try {
 				await api.delete(`/whatsappsession/${confirmModalInfo.whatsAppId}`);
+				toast.success(i18n.t("connections.toasts.disconnectSuccess"));
 			} catch (err) {
-				toastError(err);
+				toast.error(i18n.t("connections.errors.disconnectError"));
 			}
 		}
 
@@ -275,6 +285,20 @@ const Connections = () => {
 						{i18n.t("connections.buttons.connecting")}
 					</Button>
 				)}
+				
+				{/* Botão de Reset sempre disponível */}
+				<Button
+					size="small"
+					variant="contained"
+					style={{ 
+						backgroundColor: "#ff9800", 
+						color: "white",
+						marginLeft: "8px"
+					}}
+					onClick={() => handleForceReset(whatsApp.id)}
+				>
+					{i18n.t("connections.buttons.reset")}
+				</Button>
 			</>
 		);
 	};
@@ -401,7 +425,7 @@ const Connections = () => {
 					</TableHead>
 					<TableBody>
 						{loading ? (
-							<TableRowSkeleton columns={7} />
+							<TableRowSkeleton columns={8} />
 						) : (
 							<>
 								{whatsApps?.length > 0 &&

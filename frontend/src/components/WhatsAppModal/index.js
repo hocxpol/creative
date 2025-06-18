@@ -329,6 +329,23 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                           margin="dense"
                         />
                       </Grid>
+                      {schedulesEnabled && (
+                        <Grid item xs={12}>
+                          <Field
+                            as={TextField}
+                            label={i18n.t("queueModal.form.outOfHoursMessage")}
+                            type="outOfHoursMessage"
+                            multiline
+                            rows={4}
+                            fullWidth
+                            name="outOfHoursMessage"
+                            error={touched.outOfHoursMessage && Boolean(errors.outOfHoursMessage)}
+                            helperText={touched.outOfHoursMessage && errors.outOfHoursMessage}
+                            variant="outlined"
+                            margin="dense"
+                          />
+                        </Grid>
+                      )}
                     </Grid>
                   </Paper>
                 )}
