@@ -20,6 +20,7 @@ const FindOrCreateTicketService = async (
   companyId: number,
   groupContact?: Contact
 ): Promise<Ticket> => {
+  // 1. Primeira tentativa: busca ticket ativo (open/pending/closed) com o mesmo whatsappId
   let ticket = await Ticket.findOne({
     where: {
       status: {
@@ -32,18 +33,21 @@ const FindOrCreateTicketService = async (
     order: [["id", "DESC"]]
   });
 
+  // Se encontrou, atualiza
   if (ticket) {
-    await ticket.update({ unreadMessages, whatsappId });
-  }
-  
-  if (ticket?.status === "closed") {
-    await ticket.update({ queueId: null, userId: null });
+    await ticket.update({ unreadMessages });
+    
+    if (ticket.status === "closed") {
+      await ticket.update({ queueId: null, userId: null });
+    }
   }
 
+  // 2. Se não encontrou e é grupo: busca tickets recentes do MESMO whatsappId
   if (!ticket && groupContact) {
     ticket = await Ticket.findOne({
       where: {
-        contactId: groupContact.id
+        contactId: groupContact.id,
+        whatsappId
       },
       order: [["updatedAt", "DESC"]]
     });
@@ -59,24 +63,21 @@ const FindOrCreateTicketService = async (
       await FindOrCreateATicketTrakingService({
         ticketId: ticket.id,
         companyId,
-        whatsappId: ticket.whatsappId,
+        whatsappId,
         userId: ticket.userId
       });
     }
-    const msgIsGroupBlock = await Setting.findOne({
-      where: { key: "timeCreateNewTicket" }
-    });
-  
-    const value = msgIsGroupBlock ? parseInt(msgIsGroupBlock.value, 10) : 7200;
   }
 
+  // 3. Se não encontrou e é contato individual: busca tickets recentes do MESMO whatsappId
   if (!ticket && !groupContact) {
     ticket = await Ticket.findOne({
       where: {
+        contactId: contact.id,
+        whatsappId,
         updatedAt: {
           [Op.between]: [+subHours(new Date(), 2), +new Date()]
-        },
-        contactId: contact.id
+        }
       },
       order: [["updatedAt", "DESC"]]
     });
@@ -92,16 +93,17 @@ const FindOrCreateTicketService = async (
       await FindOrCreateATicketTrakingService({
         ticketId: ticket.id,
         companyId,
-        whatsappId: ticket.whatsappId,
+        whatsappId,
         userId: ticket.userId
       });
     }
   }
-  
-    const whatsapp = await Whatsapp.findOne({
+
+  const whatsapp = await Whatsapp.findOne({
     where: { id: whatsappId }
   });
 
+  // 4. Se ainda não encontrou, cria novo ticket
   if (!ticket) {
     ticket = await Ticket.create({
       contactId: groupContact ? groupContact.id : contact.id,
@@ -112,6 +114,7 @@ const FindOrCreateTicketService = async (
       whatsapp,
       companyId
     });
+
     await FindOrCreateATicketTrakingService({
       ticketId: ticket.id,
       companyId,
@@ -120,9 +123,10 @@ const FindOrCreateTicketService = async (
     });
   }
 
-  ticket = await ShowTicketService(ticket.id, companyId);
+    // Retorna ticket com dados completos
+    ticket = await ShowTicketService(ticket.id, companyId);
+    return ticket;
 
-  return ticket;
 };
 
 export default FindOrCreateTicketService;

@@ -48,7 +48,7 @@ module.exports = {
                         },
                         {
                             key: "scheduleType",
-                            value: "queue",
+                            value: "disabled",
                             companyId: 1,
                             createdAt: new Date(),
                             updatedAt: new Date()

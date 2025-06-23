@@ -129,6 +129,7 @@ export const verifyMediaMessage = async (
 
   await ticket.update({
     lastMessage: body || media.filename,
+    fromMe: msg.key.fromMe
   });
 
   const newMessage = await CreateMessageService({

@@ -50,7 +50,8 @@ const processAudioFile = async (audio: string): Promise<string> => {
 export const getMessageOptions = async (
   fileName: string,
   pathMedia: string,
-  body?: string
+  body?: string,
+  contact?: any
 ): Promise<any> => {
   const mimeType = mime.lookup(pathMedia);
   const typeMessage = mimeType.split("/")[0];
@@ -60,11 +61,13 @@ export const getMessageOptions = async (
       throw new Error("Invalid mimetype");
     }
     let options: AnyMessageContent;
+    // Processa o body com formatBody se houver contato disponível
+    const processedBody = body && contact ? formatBody(body, contact) : body;
 
     if (typeMessage === "video") {
       options = {
         video: fs.readFileSync(pathMedia),
-        caption: body ? body : null,
+        caption: processedBody ? processedBody : null,
         fileName: fileName
         // gifPlayback: true
       };
@@ -75,35 +78,35 @@ export const getMessageOptions = async (
         options = {
           audio: fs.readFileSync(convert),
           mimetype: typeAudio ? "audio/mp4" : mimeType,
-          caption: body ? body : null,
+          caption: processedBody ? processedBody : null,
           ptt: true
         };
       } else {
         options = {
           audio: fs.readFileSync(convert),
           mimetype: typeAudio ? "audio/mp4" : mimeType,
-          caption: body ? body : null,
+          caption: processedBody ? processedBody : null,
           ptt: true
         };
       }
     } else if (typeMessage === "document") {
       options = {
         document: fs.readFileSync(pathMedia),
-        caption: body ? body : null,
+        caption: processedBody ? processedBody : null,
         fileName: fileName,
         mimetype: mimeType
       };
     } else if (typeMessage === "application") {
       options = {
         document: fs.readFileSync(pathMedia),
-        caption: body ? body : null,
+        caption: processedBody ? processedBody : null,
         fileName: fileName,
         mimetype: mimeType
       };
     } else {
       options = {
         image: fs.readFileSync(pathMedia),
-        caption: body ? body : null
+        caption: processedBody ? processedBody : null
       };
     }
 
@@ -186,7 +189,10 @@ const SendWhatsAppMedia = async ({
       }
     );
 
-    await ticket.update({ lastMessage: bodyMessage });
+    await ticket.update({ 
+      lastMessage: bodyMessage,
+      fromMe: true
+    });
 
     // Adiciona a mensagem ao banco de dados com o body correto
     const CreateMessageService = (await import("../MessageServices/CreateMessageService")).default;

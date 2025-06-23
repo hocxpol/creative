@@ -28,7 +28,7 @@ interface TicketData {
   queueId?: number | null;
   chatbot?: boolean;
   queueOptionId?: number;
-  whatsappId?: string;
+  whatsappId?: number;
   useIntegration?: boolean;
   integrationId?: number | null;
   promptId?: number | null;
@@ -90,7 +90,7 @@ const UpdateTicketService = async ({
     });
 
     if (isNil(whatsappId)) {
-      whatsappId = ticket.whatsappId.toString();
+      whatsappId = ticket.whatsappId;
     }
 
     await SetTicketMessagesAsRead(ticket);
@@ -132,6 +132,8 @@ const UpdateTicketService = async ({
           companyId
         );
 
+        // Só envia mensagens de avaliação/conclusão para tickets individuais
+        if (!ticket.isGroup) {
         if (setting?.value === "enabled" && ticket.contact.automation) {
           if (ticketTraking.ratingAt == null) {
             const ratingTxt = ratingMessage || "";
@@ -178,6 +180,7 @@ const UpdateTicketService = async ({
           };
           
           await CreateMessageService({ messageData, companyId });
+          }
         }
       }
 

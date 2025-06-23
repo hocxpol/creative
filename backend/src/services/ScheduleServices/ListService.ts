@@ -46,9 +46,9 @@ const ListService = async ({
     offset,
     order: [["sendAt", "DESC"]],
     include: [
-      { model: Contact, as: "contact", attributes: ["id", "name"] },
+      { model: Contact, as: "contact", attributes: ["id", "name", "number"] },
       { model: User, as: "user", attributes: ["id", "name"] },
-      { model: Whatsapp, as: "whatsapp", attributes: ["id", "name"] }
+      { model: Whatsapp, as: "whatsapp", attributes: ["id", "name", "number"] }
     ]
   });
 

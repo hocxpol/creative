@@ -2,7 +2,7 @@ import { Op } from "sequelize";
 import AppError from "../errors/AppError";
 import Ticket from "../models/Ticket";
 
-const CheckContactOpenTickets = async (contactId: number, whatsappId?: string): Promise<void> => {
+const CheckContactOpenTickets = async (contactId: number, whatsappId?: number): Promise<void> => {
   let ticket
 
   if (!whatsappId) {

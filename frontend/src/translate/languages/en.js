@@ -534,7 +534,8 @@ const messages = {
 				ERR_INVALID_CPF: "Invalid CPF",
 				ERR_INVALID_CNPJ: "Invalid CNPJ",
 				ERR_CONTACT_DELETED: "Contact deleted successfully",
-				ERR_NO_QUEUE_PERMISSION: "You don't have permission to access this department. To get access, please contact the system administrator and request to add this department to your user profile."
+				ERR_NO_QUEUE_PERMISSION: "You don't have permission to access this department. To get access, please contact the system administrator and request to add this department to your user profile.",
+				ERR_WAPP_TOKEN_DUPLICATED: "There is already a connection with this token. Try another one."
 			},
 			schedulesForm: {
 				weekday: "Weekday",
@@ -669,6 +670,40 @@ const messages = {
 						invalidTimeFormat: "Invalid time format for this department. Please contact the administrator."
 					}
 				}
+			},
+			tagModal: {
+				title: {
+					add: "New Tag",
+					edit: "Edit Tag",
+				},
+				form: {
+					name: "Name",
+					color: "Color",
+				},
+				buttons: {
+					okAdd: "Add",
+					okEdit: "Save",
+					cancel: "Cancel",
+				},
+				success: "Tag saved successfully.",
+			},
+			tags: {
+				title: "Tags",
+				buttons: {
+					add: "Add",
+				},
+				table: {
+					name: "Name",
+					tickets: "Tickets",
+					actions: "Actions",
+				},
+				toasts: {
+					deleted: "Tag deleted successfully.",
+				},
+				confirmationModal: {
+					deleteTitle: "Delete",
+					deleteMessage: "Are you sure you want to delete this tag?",
+				},
 			},
 		},
 	},

@@ -133,7 +133,7 @@ class Ticket extends Model<Ticket> {
 
   @Default(false)
   @Column
-  typebotStatus: boolean
+  typebotStatus: boolean;
 
   @ForeignKey(() => Prompt)
   @Column

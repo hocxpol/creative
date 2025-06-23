@@ -13,7 +13,7 @@ interface Request {
   userId: number;
   companyId: number;
   queueId?: number;
-  whatsappId?: string;
+  whatsappId?: number;
 }
 
 const CreateTicketService = async ({
@@ -26,7 +26,7 @@ const CreateTicketService = async ({
 }: Request): Promise<Ticket> => {
   let whatsapp;
 
-  if (whatsappId !== undefined && whatsappId !== null && whatsappId !==  "") {
+  if (whatsappId !== undefined && whatsappId !== null) {
     whatsapp = await ShowWhatsAppService(whatsappId, companyId)
   }
   

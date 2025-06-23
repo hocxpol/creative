@@ -156,15 +156,6 @@ const Connections = () => {
 		}
 	};
 
-	const handleForceReset = async whatsAppId => {
-		try {
-			await api.post(`/whatsappsession/${whatsAppId}/reset`);
-			toast.success(i18n.t("connections.toasts.resetSuccess"));
-		} catch (err) {
-			toast.error(i18n.t("connections.errors.resetError"));
-		}
-	};
-
 	const handleOpenWhatsAppModal = () => {
 		setSelectedWhatsApp(null);
 		setWhatsAppModalOpen(true);
@@ -215,9 +206,8 @@ const Connections = () => {
 		if (confirmModalInfo.action === "disconnect") {
 			try {
 				await api.delete(`/whatsappsession/${confirmModalInfo.whatsAppId}`);
-				toast.success(i18n.t("connections.toasts.disconnectSuccess"));
 			} catch (err) {
-				toast.error(i18n.t("connections.errors.disconnectError"));
+				toast.error(i18n.t("connections.errors.connectionError"));
 			}
 		}
 
@@ -286,19 +276,6 @@ const Connections = () => {
 					</Button>
 				)}
 				
-				{/* Botão de Reset sempre disponível */}
-				<Button
-					size="small"
-					variant="contained"
-					style={{ 
-						backgroundColor: "#ff9800", 
-						color: "white",
-						marginLeft: "8px"
-					}}
-					onClick={() => handleForceReset(whatsApp.id)}
-				>
-					{i18n.t("connections.buttons.reset")}
-				</Button>
 			</>
 		);
 	};
@@ -425,7 +402,7 @@ const Connections = () => {
 					</TableHead>
 					<TableBody>
 						{loading ? (
-							<TableRowSkeleton columns={8} />
+							<TableRowSkeleton columns={7} />
 						) : (
 							<>
 								{whatsApps?.length > 0 &&

@@ -61,7 +61,7 @@ const UpdateWhatsAppService = async ({
     complationMessage,
     outOfHoursMessage,
     ratingMessage,
-    queueIds = [],
+    queueIds,
     token,
     //timeSendQueue,
     //sendIdQueue = null,
@@ -81,10 +81,38 @@ const UpdateWhatsAppService = async ({
     throw new AppError(err.message);
   }
 
-  if (queueIds.length > 1 && !greetingMessage) {
+  if (queueIds && queueIds.length > 1 && !greetingMessage) {
     throw new AppError("ERR_WAPP_GREETING_REQUIRED");
   }
 
+  // Validação de token duplicado
+  if (token && token !== "") {
+    const tokenSchema = Yup.object().shape({
+      token: Yup.string()
+        .required()
+        .min(2)
+        .test(
+          "Check-token",
+          "ERR_WAPP_TOKEN_DUPLICATED",
+          async value => {
+            if (!value) return false;
+            const tokenExists = await Whatsapp.findOne({
+              where: { 
+                token: value,
+                id: { [Op.ne]: whatsappId } // Exclui o próprio WhatsApp
+              }
+            });
+            return !tokenExists;
+          }
+        )
+    });
+
+    try {
+      await tokenSchema.validate({ token });
+    } catch (err: any) {
+      throw new AppError(err.message);
+    }
+  }
   let oldDefaultWhatsapp: Whatsapp | null = null;
 
   if (isDefault) {
@@ -125,7 +153,9 @@ const UpdateWhatsAppService = async ({
 		callMessage
   });
 
-  await AssociateWhatsappQueue(whatsapp, queueIds);
+  if (queueIds !== undefined) {
+    await AssociateWhatsappQueue(whatsapp, queueIds);
+  }
 
   return { whatsapp, oldDefaultWhatsapp };
 };

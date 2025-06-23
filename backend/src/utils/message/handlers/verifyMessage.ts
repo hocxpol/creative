@@ -168,11 +168,12 @@ export const verifyMessage = async (
   };
 
   try {
-    // Atualiza o ticket com a última mensagem
+    // Atualiza o ticket com a última mensagem e o campo fromMe
     await ticket.update({
       lastMessage: messageData.isDeleted ? "Essa mensagem foi apagada pelo contato." :
                   messageData.isEdited ? `${body} (Mensagem editada)` : 
-                  body
+                  body,
+      fromMe: messageData.fromMe // Atualiza o campo fromMe do ticket
     });
 
     // Cria ou atualiza a mensagem no banco

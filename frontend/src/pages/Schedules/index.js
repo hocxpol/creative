@@ -288,12 +288,12 @@ const Schedules = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Typography variant="subtitle1">
-                    <strong>Contato:</strong> {selectedScheduleDetails.contact.name}
+                    <strong>Contato:</strong> {selectedScheduleDetails.contact.name} ({selectedScheduleDetails.contact.number})
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="subtitle1">
-                    <strong>WhatsApp:</strong> {selectedScheduleDetails.whatsapp?.name || "Não definido"}
+                    <strong>WhatsApp:</strong> {selectedScheduleDetails.whatsapp?.name || "Não definido"} ({selectedScheduleDetails.whatsapp?.number || "Não definido"})
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>

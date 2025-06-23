@@ -195,7 +195,10 @@ const SendWhatsAppMessage = async ({
         : "Mensagem encaminhada"
       : formatBody(body, ticket.contact);
 
-    await ticket.update({ lastMessage });
+    await ticket.update({ 
+      lastMessage,
+      fromMe: true
+    });
 
     return sentMessage;
   } catch (err) {

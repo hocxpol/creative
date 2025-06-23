@@ -77,7 +77,7 @@ const transferQueue = async (
       queueId: queueId, 
       useIntegration: false, 
       promptId: null,
-      whatsappId: whatsapp.id.toString() // Atualiza o whatsappId para a nova conexão
+      whatsappId: whatsapp.id
     },
     ticketId: ticket.id,
     companyId: ticket.companyId

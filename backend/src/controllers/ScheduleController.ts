@@ -119,9 +119,9 @@ export const mediaUpload = async (
 ): Promise<Response> => {
   const { id } = req.params;
   const files = req.files as Express.Multer.File[];
-  const mediaTypes = req.body.mediaType as string[];
-  const names = req.body.name as string[];
-  const descriptions = req.body.description as string[];
+  const mediaTypes = [].concat(req.body.mediaType || []);
+  const names = [].concat(req.body.name || []);
+  const descriptions = [].concat(req.body.description || []);
 
   try {
     if (!files || files.length === 0) {

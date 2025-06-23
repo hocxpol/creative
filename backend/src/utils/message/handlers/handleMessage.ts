@@ -303,10 +303,8 @@ export const handleMessage = async (
         }
       });
 
-      // Verifica se o sistema de horário de expediente está desabilitado
-      if (!scheduleType || scheduleType.value === "disabled") {
-        return;
-      } else {
+      // Só verifica o horário se o scheduleType não estiver desabilitado
+      if (scheduleType && scheduleType.value !== "disabled") {
         const currentSchedule = await VerifyCurrentSchedule(companyId);
         const { isOutOfHours, message } = await checkOutOfHours(ticket, scheduleType, currentSchedule);
         

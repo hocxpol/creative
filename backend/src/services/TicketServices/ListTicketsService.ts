@@ -51,12 +51,9 @@ const ListTicketsService = async ({
     companyId
   };
 
-  // if (showAll !== "true") { // Versão Antiga
-	// Get user to check allTicket permission
 	const user = await ShowUserService(userId);
-	const hasAllTicketPermission = user.allTicket === 'enabled';
-
-	if (showAll !== "true" && !hasAllTicketPermission) {
+	
+	if (showAll !== "true") {
     whereCondition = {
       ...whereCondition,
       [Op.or]: [
@@ -69,8 +66,8 @@ const ListTicketsService = async ({
   if (queueIds && queueIds.length > 0) {
     whereCondition = {
       ...whereCondition,
-    queueId: { [Op.or]: [queueIds, null] }
-  };
+      queueId: { [Op.or]: [queueIds, null] }
+    };
   }
 
   let includeCondition: Includeable[] = [

@@ -196,35 +196,16 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
 							const number = fullNumber?.replace(/\D/g, "");
 							logger.info(`WhatsApp ${whatsapp.id} extracted number: ${number}`);
 
-							// Recarrega o WhatsApp com suas configurações e filas
-							const whatsappConfig = await Whatsapp.findOne({
-								where: { id: whatsapp.id },
-								include: [
-									{
-										model: Queue,
-										as: "queues",
-										attributes: ["id", "name", "color", "greetingMessage"]
-									}
-								]
+							// Atualiza apenas o status e número do WhatsApp sem mexer nas filas
+							// As filas já estão associadas no banco de dados e não precisam ser reassociadas
+							await whatsapp.update({
+								status: "CONNECTED",
+								qrcode: "",
+								retries: 0,
+								number: number || ""
 							});
 
-							if (whatsappConfig) {
-								// Atualiza o status e número do WhatsApp
-              await whatsapp.update({
-                status: "CONNECTED",
-                qrcode: "",
-									retries: 0,
-									number: number || ""
-              });
-								// Reassocia as filas ao WhatsApp
-								if (whatsappConfig.queues && whatsappConfig.queues.length > 0) {
-									const queueIds = whatsappConfig.queues.map(queue => queue.id);
-									await whatsapp.$set("queues", queueIds);
-									logger.info(`Reassociated ${queueIds.length} queues to WhatsApp ${whatsapp.id}`);
-								}
-
-								logger.info(`Updated WhatsApp ${whatsapp.id} with number ${number}`);
-							}
+							logger.info(`Updated WhatsApp ${whatsapp.id} with number ${number}`);
 
               io.to(`company-${whatsapp.companyId}-mainchannel`).emit(`company-${whatsapp.companyId}-whatsappSession`, {
                 action: "update",

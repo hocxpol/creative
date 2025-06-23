@@ -16,6 +16,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import { Tabs, Tab } from "@material-ui/core";
 import Box from "@material-ui/core/Box";
+import { i18n } from "../../translate/i18n";
 
 //import 'react-toastify/dist/ReactToastify.css';
 
@@ -182,7 +183,7 @@ export default function Options(props) {
 			key: "userRating",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setLoadingUserRating(false);
 	}
 
@@ -193,7 +194,7 @@ export default function Options(props) {
 			key: "sendGreetingMessageOneQueues",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setLoadingSendGreetingMessageOneQueues(false);
 	}
 
@@ -204,7 +205,7 @@ export default function Options(props) {
 			key: "scheduleType",
 			value,
 		});
-		toast.success('Operação atualizada com sucesso.', {
+		toast.success(i18n.t("settings.operationUpdated"), {
 			position: "top-right",
 			autoClose: 2000,
 			hideProgressBar: false,
@@ -226,7 +227,7 @@ export default function Options(props) {
 			key: "call",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setLoadingCallType(false);
 	}
 
@@ -237,7 +238,7 @@ export default function Options(props) {
 			key: "chatBotType",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setLoadingChatbotType(false);
 	}
 
@@ -248,7 +249,7 @@ export default function Options(props) {
 			key: "CheckMsgIsGroup",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setCheckMsgIsGroupType(false);
     /*     if (typeof scheduleTypeChanged === "function") {
           scheduleTypeChanged(value);
@@ -263,7 +264,7 @@ export default function Options(props) {
 			key: "sendGreetingAccepted",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setLoadingSendGreetingAccepted(false);
 	}
 
@@ -275,7 +276,7 @@ export default function Options(props) {
 			key: "sendMsgTransfTicket",
 			value,
 		});
-		toast.success("Operação atualizada com sucesso.");
+		toast.success(i18n.t("settings.operationUpdated"));
 		setLoadingSettingsTransfTicket(false);
 	}
 
@@ -299,7 +300,7 @@ export default function Options(props) {
 							<MenuItem value={"enabled"}>Habilitadas</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingUserRating && "Atualizando..."}
+							{loadingUserRating && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -320,7 +321,7 @@ export default function Options(props) {
 							<MenuItem value={"company"}>Empresa</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingScheduleType && "Atualizando..."}
+							{loadingScheduleType && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -340,7 +341,7 @@ export default function Options(props) {
 							<MenuItem value={"enabled"}>Ativado</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingScheduleType && "Atualizando..."}
+							{loadingCheckMsgIsGroup && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -360,7 +361,7 @@ export default function Options(props) {
 							<MenuItem value={"enabled"}>Aceitar</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingCallType && "Atualizando..."}
+							{loadingCallType && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -381,7 +382,7 @@ export default function Options(props) {
              {/*<MenuItem value={"list"}>Lista</MenuItem>*/}
 						</Select>
 						<FormHelperText>
-							{loadingChatbotType && "Atualizando..."}
+							{loadingChatbotType && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -400,7 +401,7 @@ export default function Options(props) {
 							<MenuItem value={"enabled"}>Habilitado</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingSendGreetingAccepted && "Atualizando..."}
+							{loadingSendGreetingAccepted && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -421,7 +422,7 @@ export default function Options(props) {
 							<MenuItem value={"enabled"}>Habilitado</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingSettingsTransfTicket && "Atualizando..."}
+							{loadingSettingsTransfTicket && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>
@@ -440,7 +441,7 @@ export default function Options(props) {
 							<MenuItem value={"enabled"}>Habilitado</MenuItem>
 						</Select>
 						<FormHelperText>
-							{loadingSendGreetingMessageOneQueues && "Atualizando..."}
+							{loadingSendGreetingMessageOneQueues && i18n.t("settings.updating")}
 						</FormHelperText>
 					</FormControl>
 				</Grid>

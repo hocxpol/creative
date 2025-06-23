@@ -1044,7 +1044,8 @@ const messages = {
 					ERR_INVALID_CNPJ: "CNPJ inválido",
 					ERR_CONTACT_DELETED: "Contacto eliminado con éxito",
 					ERR_QUICKMESSAGE_SHORTCUT_ALREADY_EXISTS: "Este atajo ya existe, elija otro.",
-					ERR_NO_QUEUE_PERMISSION: "No tienes permiso para acceder a este departamento. Para obtener acceso, contacta al administrador del sistema y solicita que se agregue este departamento a tu perfil de usuario."
+					ERR_NO_QUEUE_PERMISSION: "No tienes permiso para acceder a este departamento. Para obtener acceso, contacta al administrador del sistema y solicita que se agregue este departamento a tu perfil de usuario.",
+					ERR_WAPP_TOKEN_DUPLICATED: "Ya existe una conexión con este token. Intenta con otro.",
 				},
 			},
 		},

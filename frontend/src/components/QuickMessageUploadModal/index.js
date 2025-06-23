@@ -84,14 +84,14 @@ const QuickMessageUploadModal = ({ open, onClose, onSend, initialMessage, initia
   // Carregar mensagens rápidas
   useEffect(() => {
     async function fetchData() {
-      const companyId = localStorage.getItem("companyId");
+      const companyId = user.companyId || localStorage.getItem("companyId");
       const messages = await listQuickMessages({ companyId, userId: user.id });
       setQuickMessages(messages);
     }
     if (open) {
       fetchData();
     }
-  }, [open]);
+  }, [open, user.companyId, user.id]);
 
   // Atualizar o estado quando os props mudam
   useEffect(() => {

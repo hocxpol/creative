@@ -377,7 +377,7 @@ const CustomInput = (props) => {
 
   useEffect(() => {
     async function fetchData() {
-      const companyId = localStorage.getItem("companyId");
+      const companyId = user.companyId || localStorage.getItem("companyId");
       const messages = await listQuickMessages({ companyId, userId: user.id });
       const options = messages.map((m) => {
         let truncatedMessage = m.message;
@@ -394,7 +394,7 @@ const CustomInput = (props) => {
       setQuickMessages(options);
     }
     fetchData();
-  }, []);
+  }, [user.companyId, user.id]);
 
   useEffect(() => {
     if (

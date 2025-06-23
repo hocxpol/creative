@@ -1,6 +1,7 @@
 import Whatsapp from "../models/Whatsapp";
 import GetWhatsappWbot from "./GetWhatsappWbot";
 import fs from "fs";
+import Contact from "../models/Contact";
 
 import { getMessageOptions } from "../services/WbotServices/SendWhatsAppMedia";
 
@@ -9,6 +10,7 @@ export type MessageData = {
   body: string;
   mediaPath?: string;
   fileName?: string;
+  contact?: Contact;
 };
 
 export const SendMessage = async (
@@ -25,7 +27,8 @@ export const SendMessage = async (
       const options = await getMessageOptions(
         messageData.fileName,
         messageData.mediaPath,
-        messageData.body
+        messageData.body,
+        messageData.contact
       );
       if (options) {
         const body = fs.readFileSync(messageData.mediaPath);

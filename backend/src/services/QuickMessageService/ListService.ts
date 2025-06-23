@@ -23,25 +23,32 @@ const ListService = async ({
   const limit = 20;
   const offset = (Number(pageNumber) - 1) * limit;
 
-  const whereCondition = {
-    [Op.or]: [
-      {
-        shortcode: {
-          [Op.like]: `%${searchParam}%`
-        }
-      },
-      {
-        message: {
-          [Op.like]: `%${searchParam}%`
-        }
-      }
-    ],
+  const whereCondition: any = {
     companyId,
     [Op.or]: [
       { userId },
       { visibility: "all" }
     ]
   };
+
+  if (searchParam) {
+    whereCondition[Op.and] = [
+      {
+        [Op.or]: [
+          {
+            shortcode: {
+              [Op.like]: `%${searchParam}%`
+            }
+          },
+          {
+            message: {
+              [Op.like]: `%${searchParam}%`
+            }
+          }
+        ]
+      }
+    ];
+  }
 
   const { count, rows: quickMessages } = await QuickMessage.findAndCountAll({
     where: whereCondition,

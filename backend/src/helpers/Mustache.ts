@@ -17,6 +17,13 @@ export const firstName = (contact?: Contact): string => {
 };
 
 export default (body: string, contact: Contact): string => {
+  // Verifica se o texto contém variáveis de template ({{...}})
+  const hasTemplateVariables = /\{\{.*?\}\}/.test(body);
+  
+  // Se não há variáveis de template, retorna o texto original
+  if (!hasTemplateVariables) {
+    return body;
+  }
   let ms = "";
 
   const Hr = new Date();

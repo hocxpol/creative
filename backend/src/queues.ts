@@ -71,7 +71,13 @@ export const messageQueue = new BullQueue("MessageQueue", connection, {
 export const scheduleMonitor = new BullQueue("ScheduleMonitor", connection);
 export const sendScheduledMessages = new BullQueue(
   "SendSacheduledMessages",
-  connection
+  connection,
+  {
+    limiter: {
+      max: 1,
+      duration: 1000
+    }
+  }
 );
 
 export const campaignQueue = new BullQueue("CampaignQueue", connection);
@@ -254,13 +260,25 @@ async function handleSendScheduledMessage(job) {
   let scheduleRecord: Schedule | null = null;
 
   try {
-    scheduleRecord = await Schedule.findByPk(schedule.id);
+    scheduleRecord = await Schedule.findByPk(schedule.id, {
+      include: [
+        {
+          model: Whatsapp,
+          as: "whatsapp"
+        }
+      ]
+    });
   } catch (e) {
     Sentry.captureException(e);
   }
 
   try {
-    const whatsapp = await GetDefaultWhatsApp(schedule.companyId);
+    // Usa o WhatsApp selecionado no agendamento ao invés do padrão
+    const whatsapp = scheduleRecord.whatsapp;
+    
+    if (!whatsapp || whatsapp.status !== 'CONNECTED') {
+      throw new Error('WhatsApp não está conectado ou não foi encontrado');
+    }
 
     // Primeiro envia a mensagem principal
     const sentMessage = await SendMessage(whatsapp, {
@@ -304,19 +322,22 @@ async function handleSendScheduledMessage(job) {
 
     // Se houver anexos, envia cada um deles após a mensagem principal
     if (schedule.mediaList && schedule.mediaList.length > 0) {
-      // Aguarda um pequeno delay antes de começar a enviar os anexos
+      // Aguarda um delay maior antes de começar a enviar os anexos para garantir que a mensagem principal seja processada primeiro
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Envia os anexos sequencialmente para manter a ordem
       for (let i = 0; i < schedule.mediaList.length; i++) {
         const media = schedule.mediaList[i];
         const filePath = path.resolve("public", media.path);
         
+        try {
         // Envia o anexo com sua descrição
         const sentMediaMessage = await SendMessage(whatsapp, {
           number: schedule.contact.number,
           body: media.description || "",
           mediaPath: filePath,
-          fileName: media.name
+            fileName: media.name,
+            contact: schedule.contact
         });
 
         // Registra a mensagem do anexo no histórico do ticket
@@ -354,8 +375,15 @@ async function handleSendScheduledMessage(job) {
           }
         }, 300000);
 
-        // Adiciona um pequeno delay entre os envios dos anexos
+          // Adiciona um delay maior entre os envios dos anexos para garantir ordem
+          if (i < schedule.mediaList.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (mediaError) {
+          logger.error(`Erro ao enviar anexo ${i + 1}: ${mediaError}`);
+          Sentry.captureException(mediaError);
+          // Continua com o próximo anexo mesmo se houver erro
+        }
       }
     }
 

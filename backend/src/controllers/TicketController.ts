@@ -28,7 +28,7 @@ interface TicketData {
   status: string;
   queueId: number;
   userId: number;
-  whatsappId: string;
+  whatsappId: number;
   useIntegration: boolean;
   promptId: number;
   integrationId: number;

@@ -998,6 +998,8 @@ const messages = {
 			},
 			settings: {
 				success: "Configurações salvas com sucesso.",
+				operationUpdated: "Operação atualizada com sucesso.",
+				updating: "Atualizando...",
 				title: "Configurações",
 				tabs: {
 					data: "Departamento",
@@ -1012,17 +1014,28 @@ const messages = {
 				settings: {
 					userCreation: {
 						name: "Criação de usuário",
+						note: "Permitir criação de novos usuários",
 						options: {
-							enabled: "Habilitado",
-							disabled: "Desabilitado",
-						},
+							enabled: "Ativado",
+							disabled: "Desativado"
+						}
 					},
-					queueCreation: {
-						name: "Criação de departamento",
+					scheduleType: {
+						name: "Gerenciamento de Expediente",
+						note: "Configurar como o sistema deve se comportar quando estiver fora do expediente",
+						options: {
+							disabled: "Desabilitado",
+							queue: "Por Departamento",
+							company: "Por Empresa"
+						}
+						},
+					includeScheduleInMessage: {
+						name: "Exibir Horários na Mensagem",
+						note: "Incluir os horários de atendimento na mensagem de fora do expediente",
 						options: {
 							enabled: "Habilitado",
-							disabled: "Desabilitado",
-						},
+							disabled: "Desabilitado"
+						}
 					},
 				},
 			},
@@ -1150,6 +1163,7 @@ const messages = {
 				ERR_WAPP_GREETING_REQUIRED: "A mensagem de saudação é obrigatória se houver mais de um departamento.",
 				ERR_QUEUE_REQUIRED_WHEN_AUTOMATION_DISABLED: "O departamento é obrigatório quando a automação está desativada",
 				ERR_NO_QUEUE_PERMISSION: "Você não tem permissão para acessar este departamento. Para obter acesso, entre em contato com o administrador do sistema e solicite a adição deste departamento ao seu perfil de usuário.",
+				ERR_WAPP_TOKEN_DUPLICATED: "Já existe uma conexão com esse token. Tente outro.",
 			},
 			forward: {
 				title: "Encaminhar Mensagem",
@@ -1238,6 +1252,40 @@ const messages = {
 					emojis: "Emojis",
 					attachFile: "Anexar arquivo"
 				}
+			},
+			tagModal: {
+				title: {
+					add: "Nova Tag",
+					edit: "Editar Tag",
+				},
+				form: {
+					name: "Nome",
+					color: "Cor",
+				},
+				buttons: {
+					okAdd: "Adicionar",
+					okEdit: "Salvar",
+					cancel: "Cancelar",
+				},
+				success: "Tag salva com sucesso.",
+			},
+			tags: {
+				title: "Tags",
+				buttons: {
+					add: "Adicionar",
+				},
+				table: {
+					name: "Nome",
+					tickets: "Tickets",
+					actions: "Ações",
+				},
+				toasts: {
+					deleted: "Tag excluída com sucesso.",
+				},
+				confirmationModal: {
+					deleteTitle: "Excluir",
+					deleteMessage: "Tem certeza que deseja excluir esta tag?",
+				},
 			},
 		},
 	},
