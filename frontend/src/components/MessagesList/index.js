@@ -730,6 +730,53 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
 				);
 			}
 		}
+		else if (message.mediaType === "contactsArrayMessage") {
+			try {
+				let contactData = message.body;
+				if (typeof contactData === "string") {
+					contactData = JSON.parse(contactData);
+				}
+				
+				// Verificar se é o novo formato com múltiplos contatos
+				if (contactData.type === "contactsArrayMessage" && contactData.contacts) {
+					return (
+						<div className={classes.messageMedia}>
+							<div style={{ marginBottom: '8px', fontWeight: 'bold', color: '#666' }}>
+								{contactData.contacts.length} contato(s) recebido(s):
+							</div>
+							{contactData.contacts.map((contact, index) => (
+								<div key={index} style={{ marginBottom: '8px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
+									<VcardPreview contact={{
+										type: "vcard",
+										vcard: contact.vcard,
+										displayName: contact.displayName
+									}} numbers={null} />
+								</div>
+							))}
+						</div>
+					);
+				}
+				
+				// Fallback para formato antigo
+				return (
+					<div className={classes.messageMedia}>
+						<VcardPreview contact={{
+							type: "vcard",
+							vcard: contactData.vcard || contactData.body,
+							displayName: contactData.name || contactData.displayName
+						}} numbers={null} />
+					</div>
+				);
+			} catch (error) {
+				return (
+					<div className={classes.messageMedia}>
+						<pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+							{String(message.body)}
+						</pre>
+					</div>
+				);
+			}
+		}
 		else if (message.mediaType === "multi_vcard") {
 			try {
 				let contactData = message.body;

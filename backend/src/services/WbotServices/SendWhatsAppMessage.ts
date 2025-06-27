@@ -181,6 +181,7 @@ const SendWhatsAppMessage = async ({
         );
       }
     } else {
+      // Mensagem normal (não encaminhada)
       sentMessage = await wbot.sendMessage(
         number,
         { text: formatBody(body, ticket.contact) } as AnyMessageContent,

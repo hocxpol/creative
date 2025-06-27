@@ -2,7 +2,7 @@ import { proto } from "@whiskeysockets/baileys";
 import { IMe, Session } from "../../../services/WbotServices/wbotMessageListener";
 import { isNil } from "lodash";
 import { getIO } from "../../../libs/socket";
-import { getBodyMessage, getTypeMessage, isValidMsg } from "../messageUtils";
+import { getBodyMessage, getTypeMessage, isValidMsg } from "..";
 import { logger } from "../../../utils/logger";
 import * as Sentry from "@sentry/node";
 import CreateMessageService from "../../../services/MessageServices/CreateMessageService";
@@ -39,10 +39,10 @@ import { handleMessage } from "./handleMessage";
 import { handleMsgAck } from "./handleMsgAck";
 
 export {
-  verifyQuotedMessage,
-  sendOutOfHoursMessage,
-  checkOutOfHours,
-  verifyMessage,
-  handleMessage,
-  handleMsgAck
+	verifyQuotedMessage,
+	sendOutOfHoursMessage,
+	checkOutOfHours,
+	verifyMessage,
+	handleMessage,
+	handleMsgAck
 };

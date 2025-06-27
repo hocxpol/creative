@@ -204,6 +204,9 @@ export const handleMessage = async (
         };
 
         await CreateMessageService({ messageData, companyId });
+        // Retornar aqui para evitar processamento adicional desnecessário
+        logger.info(`vCard individual recebido e salvo: ${vcardInfo.displayName}`);
+        return;
       } catch (error) {
         logger.error('Erro ao processar vCard:', error);
         Sentry.captureException(error);
@@ -228,21 +231,38 @@ export const handleMessage = async (
           groupContact
         );
 
-        // Enviar os vCards formatados
-        const formattedVCards = {
-          contacts: {
-            displayName: "Contatos",
+        // Salvar a mensagem dos vCards no banco de dados
+        const messageData = {
+          id: msg.key.id,
+          body: JSON.stringify({
+            type: "contactsArrayMessage",
             contacts: vcards.map(contact => ({
               displayName: contact.displayName || "Contato",
               vcard: contact.vcard
             }))
-          }
+          }),
+          mediaType: "contactsArrayMessage",
+          mediaUrl: null,
+          ack: 0,
+          read: true,
+          fromMe: msg.key.fromMe,
+          contactId: msg.key.fromMe ? undefined : contact.id,
+          companyId: companyId,
+          isEdited: false,
+          isDeleted: false,
+          isForwarded: false,
+          ticketId: tempTicket.id,
+          dataJson: JSON.stringify(msg)
         };
 
-        await wbot.sendMessage(
-          `${contact.number}@${tempTicket.isGroup ? "g.us" : "s.whatsapp.net"}`,
-          formattedVCards
-        );
+        await CreateMessageService({ messageData, companyId });
+
+        // NÃO reenviar os vCards automaticamente para evitar loop
+        // O sistema deve apenas salvar a mensagem e processar normalmente
+        logger.info(`Múltiplos vCards recebidos e salvos: ${vcards.length} contatos`);
+        
+        // Retornar aqui para evitar processamento adicional que poderia causar loop
+        return;
       } catch (error) {
         logger.error('Erro ao processar múltiplos vCards:', error);
         Sentry.captureException(error);
